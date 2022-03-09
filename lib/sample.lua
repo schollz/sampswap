@@ -15,7 +15,7 @@ function Sample:new (o)
   o.index_cur=0
   o.index_max=0
   o.debounce_index=0
-  o.selected=false
+  o.selected=o.id==1
   local break_options={
     {"jump",20},
     {"reverse",5},
@@ -27,7 +27,10 @@ function Sample:new (o)
   local i=o.id
   params:add_group("loop "..i,6+#break_options)
   params:add{type='binary',name="make beat",id='break_make'..i,behavior='trigger',action=function(v) sampleswap(i) end}
-  params:add_file("break_file","load sample"..i,_path.audio.."sampswap/amen_resampled.wav")
+  params:add_file("break_file"..i,"load sample"..i,_path.audio.."sampswap/amen_resampled.wav")
+  params:set_action("break_file"..i,function(x)
+    o:update_audio_file()
+  end)
   params:add_control("break_amp"..i,"amp",controlspec.new(0,1,"lin",0.01,0.25,"",0.01/1))
   params:set_action("break_amp"..i,function(x)
     if o.playing then
@@ -45,7 +48,7 @@ function Sample:new (o)
 end
 
 function Sample:update(beats)
-  if self.beat_num==0 or self.filename==nil then
+  if self.beat_num==0 or self.filename==nil or beats==nil then
     do return end
   end
   if (beats-self.beat_offset)%self.beat_num==0 then
@@ -76,7 +79,8 @@ function Sample:toggle_playing()
 end
 
 function Sample:update_audio_file()
-  if not util.file_exists(path) do
+  print(self.id)
+  if not util.file_exists(params:get("break_file"..self.id)) then
     do return end
   end
   _,self.filename,_=string.match(params:get("break_file"..self.id),"(.-)([^\\/]-%.?([^%.\\/]*))$")
@@ -144,23 +148,23 @@ function Sample:cleanup()
 end
 
 function Sample:redraw()
-  local x=128/4*self.id
-  local icon=UI.PlaybackIcon.new(x-3,1,6,4)
+  local x=128/3*(self.id-1)
+  if self.selected then 
+    screen.level(2)
+    screen.rect(x,0,x+128/3-1,65)
+    screen.fill()
+  end
+
+
+  local icon=UI.PlaybackIcon.new(x+128/3/2+1,1,6,4)
   screen.level(self.selected and 15 or 4)
   icon.status=self.playing and 1 or 4
   icon:redraw()
   screen.level(self.selected and 15 or 4)
-  local ypos={15,25,35}
-  if self.id==2 then
-    ypos={35,15,25}
-  elseif self.id==3 then
-    ypos={25,35,15}
-  end
-  screen.move(x,ypos[1])
-  screen.text_center(params:get("break_file"..self.id))
-  screen.move(x,ypos[2])
+  screen.text_center_rotate(x+5,32,self.filename:gsub("%.wav",""),270)
+  screen.move(x+128/3/2+3,15)
   screen.text_center(""..(self.index_cur==0 and "none" or self.index_cur))
-  screen.move(x,ypos[3])
+  screen.move(x+128/3/2+3,25)
   screen.text_center(params:get("break_amp"..self.id))
 end
 

@@ -10,8 +10,9 @@
 -- K2 generates beat
 -- K3 toggles beat
 -- E changes sample
-lattice_=require("lattice")
-sample_=include("sampswap/lib/sample")
+local lattice_=require("lattice")
+local sample_=include("sampswap/lib/sample")
+local UI=require("ui")
 
 engine.name="Sampswap"
 
@@ -23,6 +24,7 @@ PROGRESSFILE="/tmp/sampswap/progress"
 shift=false
 
 function init()
+  loading=true
   sample={}
   for i=1,3 do
     sample[i]=sample_:new{id=i}
@@ -41,8 +43,9 @@ function init()
       end
       lattice_beats=lattice_beats+1
       for i,smpl in ipairs(sample) do
-        smpl:update()
+        smpl:update(lattice_beats)
       end
+      progress_file_exists=util.file_exists(PROGRESSFILE)
       redraw()
     end,
     division=1/4
@@ -62,7 +65,7 @@ function init()
     clock.cancel(clock_startup)
   end
   clock_startup=clock.run(function()
-    os.execute("cd /home/we/dust/code/sampswap/lib && sclang sampswap_nrt.supercollider &")
+    -- os.execute("cd /home/we/dust/code/sampswap/lib && sclang sampswap_nrt.supercollider &")
   end)
 end
 
@@ -122,33 +125,17 @@ end
 
 function redraw()
   screen.clear()
-  for i=1,3 do
-    local x=128/4*i-4
-    local icon=UI.PlaybackIcon.new(x,1,6,4)
-    screen.level(samplei==i and 15 or 4)
-    icon.status=sample[i].playing and 1 or 4
-    icon:redraw()
-    screen.level(samplei==i and 15 or 4)
-    screen.move(x+3,15)
-    screen.text_center(""..(sample[i].index==0 and "none" or sample[i].index))
-  end
-  screen.level(15)
+
   if loading==true then
+    screen.level(15)
     screen.move(64,32)
     screen.text_center("loading, please wait . . . ")
   else
+    for _, smpl in ipairs(sample) do 
+      smpl:redraw()
+    end
     if progress_file_exists then
       draw_progress()
-    else
-      if making_beat~=nil then
-        sample[making_beat].debounce_index=4
-        making_beat=nil
-        max_index=get_max_index()
-      end
-      screen.move(64,32-5)
-      screen.text_center("press K2 to generate")
-      screen.move(64,32+5)
-      screen.text_center("press K3 to stop/start")
     end
   end
   screen.update()
@@ -157,17 +144,11 @@ end
 slider=UI.Slider.new(4,55,118,8,0,0,100,{},"right")
 slider.label="progress"
 function draw_progress()
-  local _,filename,_=os.splitpath(params:get("break_file"))
-  screen.move(64,32-5)
-  screen.text_center(string.format("generating beat from"))
-  screen.move(64,32+5)
-  screen.text_center(string.format("'%s'",filename))
   local progress=tonumber(util.os_capture("tail -n1 "..PROGRESSFILE))
   if progress==nil then
-    do
-      return
-    end
+    do return end
   end
+  screen.level(15)
   slider:set_value(progress)
   slider:redraw()
 end

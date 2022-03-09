@@ -28,10 +28,10 @@ fi
 # install portedplugins if not already
 FILEO=/usr/share/SuperCollider/Extensions/PortedPlugins/AnalogTape_scsynth.so
 FILE=/home/we/.local/share/SuperCollider/Extensions/PortedPlugins/AnalogTape_scsynth.so
-if [ -d "$FILEO" ]; then 
+if [ -f "$FILEO" ]; then 
 	echo "have ported plugins" > /dev/null
 else
-	if [ -d "$FILE" ]; then 
+	if [ -f "$FILE" ]; then 
 		echo "have ported plugins" > /dev/null
 	else
 		echo "installing PortedPlugins..."
@@ -46,7 +46,7 @@ SENDOSC=/home/we/dust/data/sampswap/sendosc
 if [ -f "$SENDOSC" ]; then 
 	echo "have sendosc" > /dev/null 
 else 
-	cd /home/we/dust/audio/sampswap && wget https://github.com/schollz/sampswap/releases/download/startup/sendosc && chmod +x sendosc
+	cd /home/we/dust/data/sampswap && wget https://github.com/schollz/sampswap/releases/download/startup/sendosc && chmod +x sendosc
 fi
 
 # download amen_resampled if not already

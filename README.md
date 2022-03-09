@@ -14,7 +14,9 @@ this script is forked from [makebreakbeat](https://github.com/schollz/makebreakb
 
 # Documentation
 
+how it works
 
+![howitworks](https://user-images.githubusercontent.com/6550035/157556885-5b99578c-b68e-4253-8dfb-6e95278e2b58.jpg)
 
 ## notes
 
