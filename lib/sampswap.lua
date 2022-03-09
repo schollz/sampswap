@@ -2,7 +2,7 @@ math.randomseed(os.time())
 
 SENDOSC="/home/we/dust/data/sampswap/sendosc"
 WORKDIR="/tmp/sampswap/"
-PROGRESSFILE=PROGRESSFILE
+PROGRESSFILE="/tmp/sampswap/progress"
 NRTREADY="/tmp/nrt-scready"
 debugging=true
 function os.file_exists(name)
