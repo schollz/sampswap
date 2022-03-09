@@ -2,6 +2,7 @@ math.randomseed(os.time())
 
 SENDOSC="/home/we/dust/data/sampswap/sendosc"
 WORKDIR="/tmp/sampswap/"
+PROGRESSFILE=PROGRESSFILE
 NRTREADY="/tmp/nrt-scready"
 debugging=true
 function os.file_exists(name)
@@ -609,10 +610,10 @@ function run()
     else
       os.cmd("rm -rf "..WORKDIR)
       os.cmd("mkdir -p "..WORKDIR)
-      os.cmd("echo 0 > "..WORKDIR.."breaktemp-progress")
+      os.cmd("echo 0 > "..PROGRESSFILE)
       if not server_started then 
         os.cmd(SENDOSC..' --host 127.0.0.1 --addr "/quit" --port 57113')
-        os.cmd("sclang sampswap_nrt.supercollider  &")
+        os.cmd("sclang sampswap_nrt.supercollider &")
       end
       while not os.file_exists(NRTREADY) do 
         os.execute("sleep 0.1")
@@ -646,7 +647,7 @@ function run()
       -- copy and pitch and paste
       for i=1,math.floor(total_beats*p_pitch/100) do 
         progress=progress+1
-        os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..WORKDIR.."breaktemp-progress")
+        os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..PROGRESSFILE)
         local start_beat=math.random(8,total_beats-8)
         local length_beat=math.random(1,4)/8
         local paste_beat=start_beat
@@ -657,7 +658,7 @@ function run()
       -- basic copy and paste
       for i=1,math.floor(total_beats*p_jump/100) do 
         progress=progress+1
-        os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..WORKDIR.."breaktemp-progress")
+        os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..PROGRESSFILE)
         local start_beat=math.random(4,total_beats-4)*2
         local length_beat=math.random(1,3)*2
         local paste_beat=math.random(2,total_beats-length_beat/2-2)*2
@@ -667,7 +668,7 @@ function run()
       -- copy and reverse and paste
       for i=1,math.floor(total_beats*p_reverse/100) do 
         progress=progress+1
-        os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..WORKDIR.."breaktemp-progress")
+        os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..PROGRESSFILE)
         local start_beat=math.random(2,total_beats-2)*2
         local length_beat=math.random(1,3)
         local paste_beat=math.random(2,math.floor(total_beats-total_beats/2-4))*2
@@ -678,7 +679,7 @@ function run()
       -- copy and reverberate and reverse and paste
       for i=1,math.floor(total_beats*p_revreverb/100) do 
         progress=progress+1
-        os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..WORKDIR.."breaktemp-progress")
+        os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..PROGRESSFILE)
         local start_beat=math.random(3,total_beats-3)
         local length_beat=math.random(1,2)
         local paste_beat=math.random(2,math.floor(total_beats-total_beats/2-4))*2
@@ -691,7 +692,7 @@ function run()
       -- copy and reverberate and paste
       for i=1,math.floor(total_beats*p_reverb/100) do 
         progress=progress+1
-        os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..WORKDIR.."breaktemp-progress")
+        os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..PROGRESSFILE)
         local start_beat=math.random(3,total_beats-3)
         local length_beat=math.random(1,2)
         local paste_beat=math.random(2,math.floor(total_beats-total_beats/2-4))*2
@@ -704,7 +705,7 @@ function run()
       -- copy and stutter and paste
       for i=1,math.floor(total_beats*p_stutter/100/2) do 
         progress=progress+1
-        os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..WORKDIR.."breaktemp-progress")
+        os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..PROGRESSFILE)
         local crossfade=0.005
         local beat_start=math.random(4,total_beats-4)
         local piece=audio.stutter(fname_original,60/bpm/4,60/bpm*beat_start,12,crossfade,0.001,nil)
