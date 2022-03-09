@@ -2,7 +2,8 @@
 
 swap samples within loops to make new loops.
 
-![img](https://user-images.githubusercontent.com/6550035/156637615-a0363244-2186-4604-b75f-4c1936982e24.png)
+![sampswap-01](https://user-images.githubusercontent.com/6550035/157546058-96e5c62b-410a-4426-80b6-90976b9d70c4.jpg)
+
 
 this script is forked from [makebreakbeat](https://github.com/schollz/makebreakbeat). the *makebreakbeat* also worked to create mangled loops. however, *makebreakbeat* works by extract audio onset positions and then rebuilds the audio one piece at a time, by selecting an onset and adding effects to it and then appending it to the file. in contrast, *sampswap* first repeats the original audio and then copies random regions, adds effects to that copy, and then pastes the effected copy to a random position along the loop (editing the file in-place essentially).
 
