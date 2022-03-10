@@ -98,7 +98,23 @@ function toggle_sample(i)
 end
 
 function enc(k,d)
-  if k==2 then
+  if d>0 then 
+    d=1 
+  elseif d<0 then 
+    d=-1
+  end
+  if k==1 then
+    local j=1
+    for i,smpl in ipairs(sample) do 
+      j=smpl.selected and i+d or j
+    end
+    print(j)
+    if j>=1 and j<=#sample then 
+      for i,smpl in ipairs(sample) do 
+        sample[i].selected=i==j
+      end          
+    end
+  elseif k==2 then
     samplei=util.clamp(samplei+(d>0 and 1 or-1),1,3)
   elseif k==3 then
     d=d>0 and 1 or-1

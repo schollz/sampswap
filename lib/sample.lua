@@ -151,7 +151,8 @@ function Sample:redraw()
   local x=128/3*(self.id-1)
   if self.selected then 
     screen.level(2)
-    screen.rect(x,0,x+128/3-1,65)
+    print(x,0,x+128/3,65)
+    screen.rect(x,0,128/3-2,65)
     screen.fill()
   end
 
