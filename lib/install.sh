@@ -57,3 +57,6 @@ if [ -f "$STARTUPMUSIC" ]; then
 else 
 	cd /home/we/dust/audio/sampswap && wget https://github.com/schollz/sampswap/releases/download/startup/amen_resampled.wav
 fi
+
+# find current files and save it for loading
+find /home/we/dust/audio -type f -size -10M -regex ".*\.\(wav\)" | sort > /home/we/dust/data/sampswap/files.txt

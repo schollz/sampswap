@@ -24,10 +24,17 @@ PROGRESSFILE="/tmp/sampswap/progress"
 shift=false
 
 function init()
+  -- gather the list of known the wav files 
+  local file_list={}
+  for line in io.lines(_path.data.."sampswap/files.txt") do 
+    table.insert(file_list,line)
+  end
+
   loading=true
+  samplei=1
   sample={}
   for i=1,3 do
-    sample[i]=sample_:new{id=i}
+    sample[i]=sample_:new{id=i,file_list=file_list}
   end
 
   current_tempo=clock.get_tempo()
@@ -43,10 +50,13 @@ function init()
       end
       lattice_beats=lattice_beats+1
       for i,smpl in ipairs(sample) do
-        smpl:update(lattice_beats)
+        smpl:update_beat(lattice_beats)
       end
-      progress_file_exists=util.file_exists(PROGRESSFILE)
-      redraw()
+      if util.file_exists(PROGRESSFILE) then 
+        progress_current=tonumber(util.os_capture("tail -n1 "..PROGRESSFILE))
+      else
+        progress_current=nil
+      end
     end,
     division=1/4
   }
@@ -66,6 +76,13 @@ function init()
   end
   clock_startup=clock.run(function()
     -- os.execute("cd /home/we/dust/code/sampswap/lib && sclang sampswap_nrt.supercollider &")
+  end)
+  clock_redraw=clock.run(function()
+    while true do 
+      clock.sleep(1/10)
+      sample[samplei]:update()
+      redraw()
+    end
   end)
 end
 
@@ -104,24 +121,13 @@ function enc(k,d)
     d=-1
   end
   if k==1 then
-    local j=1
-    for i,smpl in ipairs(sample) do 
-      j=smpl.selected and i+d or j
-    end
-    print(j)
-    if j>=1 and j<=#sample then 
-      for i,smpl in ipairs(sample) do 
-        sample[i].selected=i==j
-      end          
-    end
+    samplei=util.clamp(samplei+d,1,3)
   elseif k==2 then
-    samplei=util.clamp(samplei+(d>0 and 1 or-1),1,3)
-  elseif k==3 then
-    d=d>0 and 1 or-1
-    sample[samplei].index=util.clamp(sample[samplei].index+d,0,max_index)
-    if sample[samplei].playing then
-      sample[samplei].debounce_index=4
+    for i=1,3 do 
+      sample[i]:option_sel_delta(d)
     end
+  elseif k==3 then
+    sample[samplei]:option_set_delta(d)
   end
 end
 
@@ -147,26 +153,9 @@ function redraw()
     screen.move(64,32)
     screen.text_center("loading, please wait . . . ")
   else
-    for _, smpl in ipairs(sample) do 
-      smpl:redraw()
-    end
-    if progress_file_exists then
-      draw_progress()
-    end
+    sample[samplei]:redraw(sample,progress_current)
   end
   screen.update()
-end
-
-slider=UI.Slider.new(4,55,118,8,0,0,100,{},"right")
-slider.label="progress"
-function draw_progress()
-  local progress=tonumber(util.os_capture("tail -n1 "..PROGRESSFILE))
-  if progress==nil then
-    do return end
-  end
-  screen.level(15)
-  slider:set_value(progress)
-  slider:redraw()
 end
 
 function cleanup()
@@ -185,6 +174,9 @@ function cleanup()
   if clock_startup~=nil then
     print("canceling clock startup")
     clock.cancel(clock_startup)
+  end
+  if clock_redraw~=nil then 
+    clock.cancel(clock_redraw)
   end
   print("finished cleaning")
 end
