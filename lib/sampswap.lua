@@ -480,7 +480,7 @@ function audio.supercollider_effect(fname,effect)
   if effect=="reverberate" then 
     durationScaling=4
   end
-  os.cmd(string.format(SENDOSC..' --host 127.0.0.1 --addr "/score" --port 57113 --recv-port 57888 -s %s -s %s -s %s -s %s -s 57888',fname,fname2,effect,durationScaling))
+  os.cmd(string.format(SENDOSC..' --host 127.0.0.1 --addr "/score" --port 47113 --recv-port 47888 -s %s -s %s -s %s -s %s -s 47888',fname,fname2,effect,durationScaling))
   return fname2
 end
 
@@ -612,7 +612,7 @@ function run()
       os.cmd("mkdir -p "..WORKDIR)
       os.cmd("echo 0 > "..PROGRESSFILE)
       if not server_started then 
-        os.cmd(SENDOSC..' --host 127.0.0.1 --addr "/quit" --port 57113')
+        os.cmd(SENDOSC..' --host 127.0.0.1 --addr "/quit" --port 47113')
         os.cmd("sclang sampswap_nrt.supercollider &")
       end
       while not os.file_exists(NRTREADY) do 
@@ -725,7 +725,7 @@ function run()
       end
       os.cmd("mv "..fname.." "..fname_out)
       if not server_started then 
-        os.cmd(SENDOSC..' --host 127.0.0.1 --addr "/quit" --port 57113')
+        os.cmd(SENDOSC..' --host 127.0.0.1 --addr "/quit" --port 47113')
       end
       os.cmd("rm -rf "..WORKDIR)
     end

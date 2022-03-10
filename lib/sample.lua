@@ -1,7 +1,6 @@
 local Sample={}
 
 local UI=require("ui")
-PROGRESSFILE="/tmp/sampswap/progress"
 
 function Sample:new (o)
   o=o or {}
@@ -28,10 +27,11 @@ function Sample:new (o)
     {"revreverb",5,5},
   }
   local i=o.id
-  params:add_group("loop "..i,8+#o.break_options)
+  params:add_group("loop "..i,7+#o.break_options)
   params:add{type='binary',name="make beat",id='break_make'..i,behavior='trigger',action=function(v) sampleswap(i) end}
   params:add_file("break_file"..i,"load sample"..i,_path.audio.."sampswap/amen_resampled.wav")
   params:set_action("break_file"..i,function(x)
+    print(i,"got new file: ",x)
     o:update_audio_file()
   end)
   params:add{type="number",id="break_inputtempo"..i,name="file tempo",min=30,max=250,default=120}
@@ -59,23 +59,38 @@ function Sample:new (o)
 end
 
 function Sample:update_beat(beats)
-  if self.beat_num==0 or self.filename==nil or beats==nil then
+  if self.beat_num==0 or self.filename==nil or beats==nil or not self.playing then
     do return end
   end
   if (beats-params:get("break_beatsoffset"..self.id))%self.beat_num==0 then
-    --print(string.format("sample %d: resetting",self.id))
+    print(string.format("sample %d: resetting",self.id))
     engine.tozero(self.id)
+    -- TODO, do this in parallel somehow?
   end
 end
 
 function Sample:update()
-  if self.debounce_load~=nil then
+  if self.making_file~=nil and global_progress_file_exists==false then 
+    if self.debounce_making_file>0 then 
+      self.debounce_making_file=self.debounce_making_file-1 
+      if self.debounce_making_file==0 then 
+        self:determine_index_max()
+        params:set("break_file"..self.id,self.making_file)
+        self.making_file=nil
+        if self.playing then 
+          self.debounce_load=4
+        end
+      end
+    end
+  end
+  if self.debounce_load~=nil and self.making==nil then
     self.debounce_load=self.debounce_load-1
     if self.debounce_load==0 then
       self.debounce_load=nil
       if util.file_exists(params:get("break_file"..self.id)) then
         print(string.format("%d: loading %s",self.id,params:get("break_file"..self.id)))
-        engine.load_track(self.id,params:get("break_file"..self.id))
+        engine.load_track(self.id,params:get("break_file"..self.id),params:get("break_amp"..self.id)/100)
+        self.loaded=true
       end
     end
   end
@@ -106,17 +121,19 @@ function Sample:update_audio_file()
   local closet_bpm={0,100000}
   for bpm=100,200 do 
     local measures=self.file_seconds/((60/bpm)*4)
-    if util.round(measures)%2==0 then 
-      local dif=math.abs(util.round(measures)-measures)
-      dif=dif-util.round(measures)/60
-      -- print(bpm,math.round(measures),measures,dif)
-      if dif<closet_bpm[2] then 
-        closet_bpm[2]=dif 
-        closet_bpm[1]=bpm
-      end
+    local measured_rounded=util.round(measures)
+    local dif=math.abs(measured_rounded-measures)
+    dif=dif-(measured_rounded%4==0 and measured_rounded/60 or 0)
+    --print(bpm,measured_rounded,measures,dif)
+    if dif<closet_bpm[2] then 
+      closet_bpm[2]=dif 
+      closet_bpm[1]=bpm
     end
   end
   params:set("break_inputtempo"..self.id,closet_bpm[1])
+  self.beat_num=util.round(self.file_seconds/(60/closet_bpm[1]))
+  self:determine_index_max()
+  self.loaded=false
   if self.playing then
     self.debounce_load=4
   end
@@ -153,16 +170,21 @@ function Sample:option_set_delta(d)
   end
 end
 
-function Sample:generate()
-  -- check whether the current filename has the SOURCE filename
-end
-
 function Sample:path_from_index(i)
   if self.filename==nil then
     do return end
   end
   local tempo=math.floor(clock.get_tempo())
-  return _path.audio.."sampswap/"..self.filename.."_bpm"..tempo.."_"..i..".wav"
+  local filename=self.filename
+  for match in (filename.."_sampswap_"):gmatch("(.-)".."_sampswap_") do
+    filename=match 
+    break
+  end
+  for match in (filename..".wav"):gmatch("(.-)"..".wav") do
+    filename=match 
+    break
+  end
+  return _path.audio.."sampswap/"..filename.."_sampswap_bpm"..tempo.."_"..i..".wav"
 end
 
 function Sample:determine_index_max()
@@ -172,6 +194,7 @@ function Sample:determine_index_max()
   end
   local tempo=math.floor(clock.get_tempo())
   for i=1,1000 do
+    --print("determine_index_max",self:path_from_index(i))
     if not util.file_exists(self:path_from_index(i)) then
       break
     end
@@ -180,16 +203,31 @@ function Sample:determine_index_max()
 end
 
 function Sample:swap()
-  if util.file_exists(PROGRESSFILE) or self.filename==nil then
+  if global_progress_file_exists or self.filename==nil or self.making_file~=nil then
     do return end
   end
   params:write()
   local tempo=math.floor(clock.get_tempo())
-  local fname=self:path_from_index(max_index+1)
-  local cmd="cd ".._path.code.."sampswap/lib/ && lua mangler.lua --server-started"
+  self.making_file=self:path_from_index(self.index_max+1)
+  self.debounce_making_file=10
+  local filename=params:get("break_file"..self.id)
+  -- TODO: if sampswpa file, then don't use the input bpm!!
+  for match in (filename.."_sampswap"):gmatch("(.-)".."_sampswap") do
+    filename=match
+    break
+  end
+  for match in (filename..".wav"):gmatch("(.-)"..".wav") do
+    filename=match..".wav"
+    break
+  end
+  if not util.file_exists(filename) then 
+    print("could not find ",filename)
+    do return end 
+  end
+  local cmd="cd ".._path.code.."sampswap/lib/ && lua sampswap.lua --server-started"
   cmd=cmd.." -input-tempo "..params:get("break_inputtempo"..self.id)
   cmd=cmd.." -t "..tempo.." -b "..params:get("break_beats"..self.id)
-  cmd=cmd.." -o "..fname.." ".." -i "..params:get("break_file"..self.id)
+  cmd=cmd.." -o "..self.making_file.." ".." -i "..filename
   for _,op in ipairs(self.break_options) do
     cmd=cmd.." --"..op[1].." "..params:get("break_"..op[1]..self.id)
   end
@@ -197,8 +235,9 @@ function Sample:swap()
     cmd=cmd.." -tapedeck"
   end
   local retempos={"speed","stretch","none"}
-  cmd=cmd.." -retempo"..retempos[params:get("break_retempo"..self.id)].." "
+  cmd=cmd.." -retempo "..retempos[params:get("break_retempo"..self.id)].." "
   cmd=cmd.." &"
+  print(cmd)
   if self.cmd_clock~=nil then
     clock.cancel(self.cmd_clock)
   end
@@ -207,11 +246,6 @@ function Sample:swap()
   end)
 end
 
-function Sample:cleanup()
-  if self.cmd_clock~=nil then
-    clock.cancel(self.cmd_clock)
-  end
-end
 
 function Sample:redraw(smp,progress_val)
   if self.filename==nil then 
@@ -229,7 +263,10 @@ function Sample:redraw(smp,progress_val)
   screen.blend_mode(1)
   screen.level(15)
   screen.move(64,7)
-  screen.text_center(self.folderend.."/"..self.filename)
+  local filename=self.filename
+  filename=filename:gsub("_sampswap","")
+  filename=filename:gsub(".wav","")
+  screen.text_center(filename)
   screen.update()
   screen.blend_mode(0)
   local sw=14

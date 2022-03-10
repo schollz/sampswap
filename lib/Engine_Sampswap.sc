@@ -72,11 +72,11 @@ Engine_Sampswap : CroneEngine {
             Out.ar(out,sndfinal);
         }).add; 
 
-        this.addCommand("load_track","is", { arg msg;
+        this.addCommand("load_track","isf", { arg msg;
             var key=msg[1];
             var fname=msg[2];
             Buffer.read(Server.default, fname,action:{ arg buf;
-                buf.postln;
+                ["loading",buf].postln;
                 if (sampleBuffSampswap.at(key).notNil,{
                     sampleBuffSampswap.at(key).free;
                 });
@@ -84,7 +84,7 @@ Engine_Sampswap : CroneEngine {
                 if (playerSampswap.at(key).notNil,{
                     playerSampswap.at(key).set(\bufnum,buf.bufnum);
                 },{
-                    playerSampswap.put(key,Synth("playerSampswap",[\bufnum,buf.bufnum,\t_trig,1]));
+                    playerSampswap.put(key,Synth("playerSampswap",[\bufnum,buf.bufnum,\t_trig,1,\amp,msg[3]]));
                 })
             }); 
         });
@@ -117,8 +117,8 @@ Engine_Sampswap : CroneEngine {
 
     free {
         // Sampswap Specific v0.0.1
-        playerSampswap.keysValuesDo({ arg key, value; value.free; });
-        sampleBuffSampswap.keysValuesDo({ arg key, value; value.free; });
+        playerSampswap.keysValuesDo({ arg key, value; ["freeing",key].postln; value.free; });
+        sampleBuffSampswap.keysValuesDo({ arg key, value;  ["freeing",key].postln; value.free; });
         // ^ Sampswap specific
     }
 }

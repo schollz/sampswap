@@ -1,11 +1,11 @@
 // sclang render.scd
 (
-var mainServer = Server(\sampswap_nrt, NetAddr("127.0.0.1", 57112));
+var mainServer = Server(\sampswap_nrt, NetAddr("127.0.0.1", 47112));
 var serverOptions=ServerOptions.new.numOutputBusChannels_(2);
 var server;
 var score;
 serverOptions.sampleRate=48000;
-server = Server(\nrt, NetAddr("127.0.0.1", 57114), options:serverOptions);
+server = Server(\nrt, NetAddr("127.0.0.1", 47114), options:serverOptions);
 SynthDef("lpf_rampup", {
 	arg out=0,  dur=30;
 	var duration=BufDur.ir(0);
@@ -114,8 +114,10 @@ mainServer.waitForBoot({
 	Routine {
 		var oscExit;
 		var oscScore;
-		thisProcess.openUDPPort(57113).postln;
-		oscExit = OSCFunc({ arg msg, time, addr, recvPort; [msg, time, addr, recvPort].postln; server.free; mainServer.free; 0.exit; }, '/quit',recvPort:57113);
+		//thisProcess.openUDPPort(47113).postln;
+		"registring osc for exiting".postln;
+		oscExit = OSCFunc({ arg msg, time, addr, recvPort; [msg, time, addr, recvPort].postln; server.free; mainServer.free; 0.exit; }, '/quit',recvPort:47113);
+		"registring osc for score".postln;
 		oscScore = OSCFunc({ arg msg, time, addr, recvPort;
 			var inFile=msg[1].asString;
 			var outFile=msg[2].asString;
@@ -125,8 +127,9 @@ mainServer.waitForBoot({
 			[msg, time, addr, recvPort].postln;
 			score.value(inFile,outFile,synthDefinition,durationScaling,oscCallbackPort);
 			"finished".postln;
-		}, '/score',recvPort:57113);
+		}, '/score',recvPort:47113);
 		1.wait;
+		"writing ready file".postln;
 		File.new("/tmp/nrt-scready", "w");
 		"ready".postln;
 	}.play;

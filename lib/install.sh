@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# clear previous workloads
-rm -f /tmp/breaktemp-*
-
 # link aubioonset if not already
 sudo ldconfig
 
@@ -58,5 +55,7 @@ else
 	cd /home/we/dust/audio/sampswap && wget https://github.com/schollz/sampswap/releases/download/startup/amen_resampled.wav
 fi
 
-# find current files and save it for loading
-# find /home/we/dust/audio -type f -size -10M -regex ".*\.\(wav\)" | sort > /home/we/dust/data/sampswap/files.txt
+## cleanup
+/home/we/dust/code/sampswap/lib/cleanup.sh
+## startup server
+cd /home/we/dust/code/sampswap/lib && sclang sampswap_nrt.supercollider &

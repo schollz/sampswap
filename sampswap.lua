@@ -22,6 +22,7 @@ NRTREADY="/tmp/nrt-scready"
 PROGRESSFILE="/tmp/sampswap/progress"
 
 shift=false
+global_progress_file_exists=false
 
 function init()
   -- gather the list of known the wav files 
@@ -32,16 +33,24 @@ function init()
 
   loading=true
   samplei=1
-  sample={}
-  for i=1,3 do
-    sample[i]=sample_:new{id=i,file_list=file_list}
-  end
+  sample=nil
 
   current_tempo=clock.get_tempo()
   lattice=lattice_:new()
   lattice_beats=-1
   pattern=lattice:new_pattern{
     action=function(t)
+      loading=not util.file_exists(NRTREADY)
+      if loading then
+        do return end 
+      end
+      if sample==nil then 
+        sample={}
+        for i=1,3 do
+          sample[i]=sample_:new{id=i,file_list=file_list}
+        end
+        params:default()
+      end
       if clock.get_tempo()~=current_tempo then
         current_tempo=clock.get_tempo()
         for i,smpl in ipairs(sample) do
@@ -52,7 +61,8 @@ function init()
       for i,smpl in ipairs(sample) do
         smpl:update_beat(lattice_beats)
       end
-      if util.file_exists(PROGRESSFILE) then 
+      global_progress_file_exists=util.file_exists(PROGRESSFILE)
+      if global_progress_file_exists then 
         progress_current=tonumber(util.os_capture("tail -n1 "..PROGRESSFILE))
       else
         progress_current=nil
@@ -62,59 +72,25 @@ function init()
   }
   lattice:start()
 
-  params:default()
-
   -- startup scripts
-  norns.system_cmd(_path.code.."sampswap/lib/install.sh",function(x)
-    loading=false
-  end)
-  os.execute("rm -rf "..WORKDIR)
-  os.execute("rm -f "..NRTREADY)
-  os.execute(SENDOSC..' --host 127.0.0.1 --addr "/quit" --port 57113')
-  if clock_startup~=nil then
-    clock.cancel(clock_startup)
-  end
-  clock_startup=clock.run(function()
-    -- os.execute("cd /home/we/dust/code/sampswap/lib && sclang sampswap_nrt.supercollider &")
+  startup_clock=clock.run(function()
+    os.execute(_path.code.."sampswap/lib/install.sh &")
   end)
   clock_redraw=clock.run(function()
     while true do 
       clock.sleep(1/10)
-      sample[samplei]:update()
+      if sample~=nil then 
+        sample[samplei]:update()
+      end
       redraw()
     end
   end)
 end
 
-function filename_from_index(basename,index)
-  local tempo=math.floor(clock.get_tempo())
-  return _path.audio.."sampswap/"..basename.."_bpm"..tempo.."_"..index..".wav"
-end
-
-function get_max_index(basename)
-  local tempo=math.floor(clock.get_tempo())
-  local mi=0
-  for i=1,1000 do
-    if not util.file_exists(filename_from_index(basename,i)) then
-      break
-    end
-    mi=i
-  end
-  return mi
-end
-
-function toggle_sample(i)
-  print("toggling sample "..i)
-  sample[i].playing=not sample[i].playing
-  if not sample[i].playing then
-    engine.amp(i,0)
-  else
-    engine.amp(i,1)
-    sample[i].debounce_index=1
-  end
-end
-
 function enc(k,d)
+  if loading then 
+    do return end 
+  end
   if d>0 then 
     d=1 
   elseif d<0 then 
@@ -132,9 +108,13 @@ function enc(k,d)
 end
 
 function key(k,z)
+  if loading then 
+    do return end 
+  end
   if k==1 then
     shift=z==1
   elseif k==2 and z==1 then
+    sample[samplei]:swap()
   elseif k==3 and z==1 then
     if shift then
       lattice_beats=-1
@@ -148,36 +128,40 @@ end
 
 function redraw()
   screen.clear()
-
-  if loading==true then
+  screen.aa(0)
+  if loading then
     screen.level(15)
     screen.move(64,32)
     screen.text_center("loading, please wait . . . ")
   else
-    sample[samplei]:redraw(sample,progress_current)
+    if sample~=nil then 
+      sample[samplei]:redraw(sample,progress_current)
+    end
   end
   screen.update()
 end
 
 function cleanup()
   print("cleaning up script...")
-  os.execute(SENDOSC..' --host 127.0.0.1 --addr "/quit" --port 57113')
-  os.execute("rm -rf "..WORKDIR)
-  os.execute("rm -f "..NRTREADY)
-  if lattice.superclock_id~=nil then
-    print("canceling lattice clock")
-    clock.cancel(lattice.superclock_id)
+  os.execute("/home/we/dust/code/sampswap/lib/cleanup.sh")
+  if lattice~=nil then 
+    if lattice.superclock_id~=nil then
+      print("canceling lattice clock")
+      clock.cancel(lattice.superclock_id)
+    end
   end
-  if cmd_clock~=nil then
-    print("canceling clock cmd")
-    clock.cancel(cmd_clock)
-  end
-  if clock_startup~=nil then
-    print("canceling clock startup")
-    clock.cancel(clock_startup)
+  if sample~=nil then 
+    for _, smpl in ipairs(sample) do
+      if smpl.cmd_clock~=nil then 
+        clock.cancel(smpl.cmd_clock)
+      end
+    end
   end
   if clock_redraw~=nil then 
     clock.cancel(clock_redraw)
+  end
+  if startup_clock~=nil then 
+    clock.cancel(startup_clock)
   end
   print("finished cleaning")
 end
