@@ -140,6 +140,7 @@ function key(k,z)
       lattice_beats=-1
       lattice:hard_restart()
     else
+      sample[samplei]:toggle_playing()
     end
   end
 

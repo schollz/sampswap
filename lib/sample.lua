@@ -16,7 +16,7 @@ function Sample:new (o)
   o.beat_num=0
   o.index_cur=0
   o.index_max=0
-  o.debounce_index=0
+  o.debounce_load=nil
   o.selected=o.id==1
   o.break_options={
     {"amp",25,5},
@@ -28,13 +28,18 @@ function Sample:new (o)
     {"revreverb",5,5},
   }
   local i=o.id
-  params:add_group("loop "..i,7+#o.break_options)
+  params:add_group("loop "..i,8+#o.break_options)
   params:add{type='binary',name="make beat",id='break_make'..i,behavior='trigger',action=function(v) sampleswap(i) end}
   params:add_file("break_file"..i,"load sample"..i,_path.audio.."sampswap/amen_resampled.wav")
   params:set_action("break_file"..i,function(x)
     o:update_audio_file()
   end)
-
+  params:add{type="number",id="break_inputtempo"..i,name="file tempo",min=30,max=250,default=120}
+  params:set_action("break_inputtempo"..i,function(x)
+    if o.file_seconds~=nil then 
+      o.beat_num=util.round(o.file_seconds/(60/x))
+    end
+  end)
   params:add{type="number",id="break_beats"..i,name="beats",min=16,max=128,default=32}
   params:add{type="number",id="break_beatsoffset"..i,name="beat off",min=0,max=16,default=0}
   for _,op in ipairs(o.break_options) do
@@ -46,9 +51,10 @@ function Sample:new (o)
     end
   end)
   params:add_option("break_tapedeck"..i,"tapedeck",{"no","yes"})
-  o.retempo_options={"speed","timestretch","none"}
+  o.retempo_options={"repitch","stretch","none"}
   params:add_option("break_retempo"..i,"tempo changing",o.retempo_options)
 
+  o:determine_index_max()
   return o
 end
 
@@ -63,32 +69,24 @@ function Sample:update_beat(beats)
 end
 
 function Sample:update()
-  if self.debounce_analyze~=nil then 
-    self.debounce_analyze=self.debounce_analyze-1
-    if self.debounce_analyze==0 then 
-      self.debounce_analyze=nil 
-      self:analyze_audio_file()
-    end
-  end
-  if self.debounce_index~=nil then
-    self.debounce_index=self.debounce_index-1
-    if self.debounce_index==0 then
-      self.debounce_index=nil
-      if self.index_cur>0 then
-        print(string.format("sample %d: loading %s",self.id,self.filename))
-        if util.file_exists(params:get("break_file"..self.id)) then
-          engine.load_track(self.id,params:get("break_file"..self.id))
-        end
+  if self.debounce_load~=nil then
+    self.debounce_load=self.debounce_load-1
+    if self.debounce_load==0 then
+      self.debounce_load=nil
+      if util.file_exists(params:get("break_file"..self.id)) then
+        print(string.format("%d: loading %s",self.id,params:get("break_file"..self.id)))
+        engine.load_track(self.id,params:get("break_file"..self.id))
       end
     end
   end
 end
 
 function Sample:toggle_playing()
+  print(self.id,"toggle_playing")
   self.playing=not self.playing
   engine.amp(self.id,self.playing and params:get("break_amp"..self.id) or 0)
   if not self.loaded then
-    self.debounce_index=1
+    self.debounce_load=1
   end
 end
 
@@ -102,18 +100,12 @@ function Sample:update_audio_file()
   for token in string.gmatch(self.folder, "[^/]+") do
    self.folderend=token
   end
-  self:analyze_audio_file()
-end
-
-function Sample:analyze_audio_file()
-  print("analyze_audio_file")
   local fname=params:get("break_file"..self.id)
-
   local s=util.os_capture("sox "..fname.." -n stat 2>&1  | grep Length | awk '{print $3}'")
-  local seconds=tonumber(s)
+  self.file_seconds=tonumber(s)
   local closet_bpm={0,100000}
   for bpm=100,200 do 
-    local measures=seconds/((60/bpm)*4)
+    local measures=self.file_seconds/((60/bpm)*4)
     if util.round(measures)%2==0 then 
       local dif=math.abs(util.round(measures)-measures)
       dif=dif-util.round(measures)/60
@@ -124,10 +116,9 @@ function Sample:analyze_audio_file()
       end
     end
   end
-  self.bpm=closet_bpm[1]
-  self.beat_num=util.round(seconds/(60/self.bpm))
+  params:set("break_inputtempo"..self.id,closet_bpm[1])
   if self.playing then
-    self.debounce_index=4
+    self.debounce_load=4
   end
   -- find the file index in the list 
   for i, fname_in_list in ipairs(self.file_list) do 
@@ -138,19 +129,33 @@ function Sample:analyze_audio_file()
 end
 
 function Sample:option_sel_delta(d)
-  self.op=util.clamp(self.op+d,1,12)
+  self.op=util.clamp(self.op+d,1,13)
   if self.op>6 then 
-    self.break_options[13-self.op][3]=5
+    self.break_options[14-self.op][3]=5
   end
 end
 
 function Sample:option_set_delta(d)
   if self.op==1 then 
-    -- TODO: switch loop
+    -- TODO: switch loop based on the produced loops
   elseif self.op==2 then 
+    params:delta("break_inputtempo"..self.id,d)
+  elseif self.op==3 then 
+    params:delta("break_beats"..self.id,d)
+  elseif self.op==4 then 
+    params:delta("break_beatsoffset"..self.id,d)
+  elseif self.op==5 then 
+    params:delta("break_retempo"..self.id,d)
+  elseif self.op==6 then 
+  else
+    params:delta("break_"..self.break_options[14-self.op][1]..self.id,d)
+    self.break_options[14-self.op][3]=5
   end
 end
 
+function Sample:generate()
+  -- check whether the current filename has the SOURCE filename
+end
 
 function Sample:path_from_index(i)
   if self.filename==nil then
@@ -182,9 +187,10 @@ function Sample:swap()
   local tempo=math.floor(clock.get_tempo())
   local fname=self:path_from_index(max_index+1)
   local cmd="cd ".._path.code.."sampswap/lib/ && lua mangler.lua --server-started"
+  cmd=cmd.." -input-tempo "..params:get("break_inputtempo"..self.id)
   cmd=cmd.." -t "..tempo.." -b "..params:get("break_beats"..self.id)
   cmd=cmd.." -o "..fname.." ".." -i "..params:get("break_file"..self.id)
-  for _,op in ipairs(break_options) do
+  for _,op in ipairs(self.break_options) do
     cmd=cmd.." --"..op[1].." "..params:get("break_"..op[1]..self.id)
   end
   if params:get("break_tapedeck"..self.id)==2 then
@@ -248,11 +254,11 @@ function Sample:redraw(smp,progress_val)
     local y=10
     local bar=UI.Slider.new(x,y,udsw,64-9*2+1,0,0,100,{},"up")
     bar:set_value(params:get("break_"..self.break_options[i][1]..self.id))
-    bar.active=self.op==12-(i-1)
+    bar.active=self.op==13-(i-1)
     bar:redraw()
     if self.break_options[i][3]>0 then 
       screen.level(self.break_options[i][3])
-      screen.move(x+udsw/2,64)
+      screen.move(x+udsw/2,63)
       screen.text_center(self.break_options[i][1])  
       self.break_options[i][3]=self.break_options[i][3]-1
     end
@@ -263,22 +269,28 @@ function Sample:redraw(smp,progress_val)
     local y=16
     local lh=9.5
     screen.move(0,y)
-    screen.level(self.op==1 and 15 or 5)
-    screen.text(self.beat_num.." @ "..self.bpm)
-    screen.move(0,y+lh)
+    screen.level(5)
+    screen.text(self.beat_num.."qn")
+    screen.move(40,y)
     screen.level(self.op==2 and 15 or 5)
-    screen.text(params:get("break_beats"..self.id).." @ "..math.floor(clock.get_tempo()))
-    screen.move(0,y+lh*2)
+    screen.text_right(params:get("break_inputtempo"..self.id))
+
+    screen.move(0,y+lh)
     screen.level(self.op==3 and 15 or 5)
+    screen.text(params:get("break_beats"..self.id).."qn")
+    screen.move(40,y+lh)
+    screen.level(5)
+    screen.text_right(math.floor(clock.get_tempo()))
+
+    screen.move(0,y+lh*2)
+    screen.level(self.op==4 and 15 or 5)
     screen.text("off: "..params:get("break_beatsoffset"..self.id))
     screen.move(0,y+lh*3)
-    screen.level(self.op==4 and 15 or 5)
+    screen.level(self.op==5 and 15 or 5)
     screen.text(self.retempo_options[params:get("break_retempo"..self.id)])
     screen.move(0,y+lh*4)
-    screen.level(self.op==5 and 15 or 5)
-    screen.text("f+t+l")
-    -- screen.move(0,y+lh*5)
-    -- screen.text("f+t+l")
+    screen.level(self.op==6 and 15 or 5)
+    -- TODO: allow selecting multiple options screen.text("f+t+l")
   end
   
   

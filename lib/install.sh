@@ -59,4 +59,4 @@ else
 fi
 
 # find current files and save it for loading
-find /home/we/dust/audio -type f -size -10M -regex ".*\.\(wav\)" | sort > /home/we/dust/data/sampswap/files.txt
+# find /home/we/dust/audio -type f -size -10M -regex ".*\.\(wav\)" | sort > /home/we/dust/data/sampswap/files.txt
