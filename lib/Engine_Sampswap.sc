@@ -275,9 +275,9 @@ Engine_Sampswap : CroneEngine {
         playerSampswap.keysValuesDo({ arg key, value; ["freeing",key].postln; value.free; });
         sampleBuffSampswap.keysValuesDo({ arg key, value;  ["freeing",key].postln; value.free; });
         // ^ Sampswap specific
-        mainServer.postln;
         mainServer.quit;
-        nrtServer.postln;
         nrtServer.quit;
+	mainServer.free;
+	nrtServer.free;
     }
 }
