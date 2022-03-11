@@ -183,7 +183,12 @@ function Sample:update_audio_file()
     end
   end
   params:set("break_inputtempo"..self.id,closet_bpm[1])
-  local bpm=fname:match("bpm%d+")
+  local bpm=nil
+  for word in string.gmatch(fname, '([^_]+)') do
+    if string.find(word,"bpm") then 
+      bpm=fname:match("bpm%d+")
+    end
+  end
   if bpm~=nil then
     bpm=bpm:match("%d+")
     if bpm~=nil then

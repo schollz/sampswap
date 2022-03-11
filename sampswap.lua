@@ -25,12 +25,6 @@ shift=false
 global_progress_file_exists=false
 
 function init()
-  -- gather the list of known the wav files 
-  local file_list={}
-  for line in io.lines(_path.data.."sampswap/files.txt") do 
-    table.insert(file_list,line)
-  end
-
   loading=true
   samplei=1
   sample=nil
@@ -47,7 +41,7 @@ function init()
       if sample==nil then 
         sample={}
         for i=1,3 do
-          sample[i]=sample_:new{id=i,file_list=file_list}
+          sample[i]=sample_:new{id=i}
         end
         params:default()
       end
@@ -85,7 +79,7 @@ function init()
 
   -- startup scripts
   startup_clock=clock.run(function()
-    os.execute(_path.code.."sampswap/lib/install.sh &")
+    os.execute(_path.code.."sampswap/lib/install.sh 2>&1 | tee /tmp/sampswap.log &")
   end)
   clock_redraw=clock.run(function()
     while true do 
@@ -111,7 +105,7 @@ function enc(k,d)
     samplei=util.clamp(samplei+d,1,3)
   elseif k==2 then
     for i=1,3 do 
-      sample[i]:option_sel_delta(sampleid,d)
+      sample[i]:option_sel_delta(samplei,d)
     end
   elseif k==3 then
     sample[samplei]:option_set_delta(d)
@@ -142,8 +136,12 @@ function redraw()
   screen.aa(0)
   if loading then
     screen.level(15)
-    screen.move(64,32)
+    screen.move(64,18)
     screen.text_center("loading, please wait . . . ")
+    screen.move(64,28)
+    screen.text_center(util.os_capture("tail -n2 /tmp/sampswap.log | head -n1"))
+    screen.move(64,38)
+    screen.text_center(util.os_capture("tail -n1 /tmp/sampswap.log"))
   else
     if sample~=nil then 
       sample[samplei]:redraw(sample,progress_current)

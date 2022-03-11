@@ -9,42 +9,42 @@ server = Server(\nrt, NetAddr("127.0.0.1", 47114), options:serverOptions);
 SynthDef("lpf_rampup", {
 	arg out=0,  dur=30;
 	var duration=BufDur.ir(0);
-	var snd = PlayBuf.ar(2,0);
+	var snd = PlayBuf.ar(2,0,BufRateScale.kr(0));
 	snd=LPF.ar(snd,XLine.kr(200,20000,duration));
-	snd = snd * EnvGen.ar(Env.new([0, 1, 1, 0], [0,dur,0]), doneAction:2);
+	snd = snd * EnvGen.ar(Env.new([0, 1, 1, 0], [0.005,dur-0.01,0.005]), doneAction:2);
 	Out.ar(out, snd);
 }).load(server);
 SynthDef("lpf_rampdown", {
 	arg out=0,  dur=30;
 	var duration=BufDur.ir(0);
-	var snd = PlayBuf.ar(2,0);
+	var snd = PlayBuf.ar(2,0,BufRateScale.kr(0));
 	snd=LPF.ar(snd,XLine.kr(20000,200,duration));
-	snd = snd * EnvGen.ar(Env.new([0, 1, 1, 0], [0,dur,0]), doneAction:2);
+	snd = snd * EnvGen.ar(Env.new([0, 1, 1, 0], [0.005,dur-0.01,0.005]), doneAction:2);
 	Out.ar(out, snd);
 }).load(server);
 SynthDef("dec_ramp", {
 	arg out=0,  dur=30;
 	var duration=BufDur.ir(0);
-	var snd = PlayBuf.ar(2,0);
+	var snd = PlayBuf.ar(2,0,BufRateScale.kr(0));
 	snd=SelectX.ar(Line.kr(0,1,duration/4),[snd,Decimator.ar(snd,8000,8)]);
-	snd = snd * EnvGen.ar(Env.new([0, 1, 1, 0], [0,dur,0]), doneAction:2);
+	snd = snd * EnvGen.ar(Env.new([0, 1, 1, 0], [0.005,dur-0.01,0.005]), doneAction:2);
 	Out.ar(out, snd);
 }).load(server);
 SynthDef("dec", {
 	arg out=0,  dur=30;
 	var duration=BufDur.ir(0);
-	var snd = PlayBuf.ar(2,0);
+	var snd = PlayBuf.ar(2,0,BufRateScale.kr(0));
 	snd=Decimator.ar(snd,8000,8);
-	snd = snd * EnvGen.ar(Env.new([0, 1, 1, 0], [0,dur,0]), doneAction:2);
+	snd = snd * EnvGen.ar(Env.new([0, 1, 1, 0], [0.005,dur-0.01,0.005]), doneAction:2);
 	Out.ar(out, snd);
 }).load(server);
 SynthDef("reverberate", {
 	arg out=0,  dur=30;
 	var duration=BufDur.ir(0);
-	var snd = PlayBuf.ar(2,0);
-	snd=SelectX.ar(XLine.kr(0,1,duration/4),[snd,Greyhole.ar(snd)]);
+	var snd = PlayBuf.ar(2,0,BufRateScale.kr(0));
+	snd=SelectX.ar(XLine.kr(0,1,duration/4),[snd,Greyhole.ar(snd* EnvGen.ar(Env.new([0, 1, 1, 0], [0.1,dur-0.2,0.1]), doneAction:2))]);
 	snd=LeakDC.ar(snd);
-	snd = snd * EnvGen.ar(Env.new([0, 1, 1, 0], [0,dur,0]), doneAction:2);
+	snd = snd * EnvGen.ar(Env.new([0, 1, 1, 0], [0.1,dur-0.2,0.1]), doneAction:2);
 	Out.ar(out, snd);
 }).load(server);
 SynthDef("tapedeck", {
@@ -56,23 +56,23 @@ SynthDef("tapedeck", {
 	hpf=60,hpfqr=0.6,
 	lpf=18000,lpfqr=0.6;
 	var duration=BufDur.ir(0);
-	var snd = PlayBuf.ar(2,0);
+	var snd = PlayBuf.ar(2,0,BufRateScale.kr(0));
 	snd=snd*amp;
 	snd=SelectX.ar(Lag.kr(tape_wet,1),[snd,AnalogTape.ar(snd,tape_bias,saturation,drive,tape_oversample,mode)]);	
 	snd=SelectX.ar(Lag.kr(dist_wet/10,1),[snd,AnalogVintageDistortion.ar(snd,drivegain,dist_bias,lowgain,highgain,shelvingfreq,dist_oversample)]);				
 	snd=RHPF.ar(snd,hpf,hpfqr);
 	snd=RLPF.ar(snd,lpf,lpfqr);
-	snd = snd * EnvGen.ar(Env.new([0, 1, 1, 0], [0,dur,0]), doneAction:2);
+	snd = snd * EnvGen.ar(Env.new([0, 1, 1, 0], [0.005,dur-0.01,0.005]), doneAction:2);
 	Out.ar(out, snd);
 }).load(server);
 SynthDef("filter_in_out", {
 	arg out=0,  dur=30;
 	var duration=BufDur.ir(0);
-	var snd = PlayBuf.ar(2,0);
+	var snd = PlayBuf.ar(2,0,BufRateScale.kr(0));
 	snd = RLPF.ar(snd,
 		LinExp.kr(EnvGen.kr(Env.new([0.1, 1, 1, 0.1], [2,dur-4,2])),0.1,1,100,20000),
 		0.6);
-	snd = snd * EnvGen.ar(Env.new([0, 1, 1, 0], [0,dur,0]), doneAction:2);
+	snd = snd * EnvGen.ar(Env.new([0, 1, 1, 0], [0.005,dur-0.01,0.005]), doneAction:2);
 	Out.ar(out, snd);
 }).load(server);
 

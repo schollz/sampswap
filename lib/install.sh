@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # link aubioonset if not already
+echo "linking libraries"
 sudo ldconfig
 
 # install sox
@@ -43,6 +44,7 @@ SENDOSC=/home/we/dust/data/sampswap/sendosc
 if [ -f "$SENDOSC" ]; then 
 	echo "have sendosc" > /dev/null 
 else 
+	echo "downloading sendosc..."
 	cd /home/we/dust/data/sampswap && wget https://github.com/schollz/sampswap/releases/download/startup/sendosc && chmod +x sendosc
 fi
 
@@ -52,10 +54,12 @@ STARTUPMUSIC=/home/we/dust/audio/sampswap/amen_resampled.wav
 if [ -f "$STARTUPMUSIC" ]; then 
 	echo "have startupmusic" > /dev/null 
 else 
+	echo "downloading starting sample..."
 	cd /home/we/dust/audio/sampswap && wget https://github.com/schollz/sampswap/releases/download/startup/amen_resampled.wav
 fi
 
 ## cleanup
+echo "cleaning up..."		
 /home/we/dust/code/sampswap/lib/cleanup.sh
 mkdir -p /tmp/sampswap
 ## startup server

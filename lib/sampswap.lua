@@ -418,7 +418,7 @@ function audio.sample_rate(fname,sr,ch)
   sr=sr or 48000
   ch=ch or 2
   local fname2=string.random_filename()
-  os.cmd(string.format("sox -r %d -c %d %s %s",sr,ch,fname,fname2))
+  os.cmd(string.format("sox -r %d %s %s",sr,fname,fname2))
   return fname2
 end
 
@@ -609,13 +609,20 @@ function run()
       original_fname=fname
       fname=audio.sample_rate(fname,48000,2)
       fname=audio.silence_trim(fname)
-      local bpm=original_fname:match("_bpm%d+")
+      local bpm=nil
+      for word in string.gmatch(original_fname, '([^_]+)') do
+        print(word)
+        if string.find(word,"bpm") then 
+          bpm=word:match("bpm%d+")
+        end
+      end
       print("matched bpm",bpm)
       if bpm~=nil then
         bpm=bpm:match("%d+")
       end
       if bpm==nil then 
-         bpm=input_tempo or audio.tempo(fname)
+        -- bpm=input_tempo or audio.tempo(fname)
+        bpm=audio.tempo(fname)
       end
       print("bpm: "..bpm)
 
@@ -623,17 +630,6 @@ function run()
       local beats=math.floor(audio.length(fname)/(60/bpm))
       fname=audio.trim(fname,0,beats*60/bpm)
 
-      if retempo_switch~=RETEMPO_NONE and new_tempo~=nil and new_tempo~=bpm  then 
-        print("retempo_switch",retempo_switch)
-        if retempo_switch==RETEMPO_SPEED then 
-          fname=audio.retempo_speed(fname,bpm,new_tempo)
-        elseif retempo_switch==RETEMPO_STRETCH then 
-          print("stretching temp",bpm,new_tempo)
-          fname=audio.retempo_stretch(fname,bpm,new_tempo)
-        end
-        bpm=new_tempo
-      end
-      
       beats=audio.length(fname)/(60/bpm)
       while beats<target_beats do 
         fname=audio.repeat_n(fname,2)
@@ -670,7 +666,7 @@ function run()
         local start_beat=math.random(4,total_beats-4)*2
         local length_beat=math.random(1,3)*2
         local paste_beat=math.random(2,total_beats-length_beat/2-2)*2
-        local crossfade=0.05
+        local crossfade=0.005
         fname=audio.copy_and_paste(fname,60/bpm/2*start_beat,60/bpm/2*(start_beat+length_beat),60/bpm/2*paste_beat,crossfade)
       end
       -- copy and reverse and paste
@@ -704,7 +700,7 @@ function run()
         local start_beat=math.random(3,total_beats-3)
         local length_beat=math.random(1,2)
         local paste_beat=math.random(2,math.floor(total_beats-total_beats/2-4))*2
-        local crossfade=0.005
+        local crossfade=0.055
         local piece=audio.trim(fname_original,60/bpm*start_beat-crossfade,60/bpm/4*length_beat+crossfade*2)
         piece=audio.supercollider_effect(piece,"reverberate")
         fname=audio.paste(fname,piece,60/bpm/2*paste_beat,crossfade)
@@ -720,6 +716,18 @@ function run()
         piece=audio.supercollider_effect(piece,"lpf_rampup")
         fname=audio.paste(fname,piece,60/bpm/4*math.random(12,total_beats*4-16),crossfade)
       end
+
+      if retempo_switch~=RETEMPO_NONE and new_tempo~=nil and new_tempo~=bpm  then 
+        print("retempo_switch",retempo_switch)
+        if retempo_switch==RETEMPO_SPEED then 
+          fname=audio.retempo_speed(fname,bpm,new_tempo)
+        elseif retempo_switch==RETEMPO_STRETCH then 
+          print("stretching temp",bpm,new_tempo)
+          fname=audio.retempo_stretch(fname,bpm,new_tempo)
+        end
+        bpm=new_tempo
+      end
+
       fname=audio.supercollider_effect(fname,"filter_in_out")
       if tapedeck then 
         fname=audio.supercollider_effect(fname,"tapedeck")
