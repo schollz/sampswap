@@ -57,5 +57,6 @@ fi
 
 ## cleanup
 /home/we/dust/code/sampswap/lib/cleanup.sh
+mkdir -p /tmp/sampswap
 ## startup server
 cd /home/we/dust/code/sampswap/lib && sclang sampswap_nrt.supercollider &

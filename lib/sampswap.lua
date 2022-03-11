@@ -350,20 +350,7 @@ end
 
 function audio.retempo_stretch(fname,old_tempo,new_tempo)
   local fname2=string.random_filename()
-  local ratio=new_tempo/old_tempo
-  local factor_change=ratio 
-  -- The optional segment parameter selects the algorithm's segment size 
-  -- in milliseconds. The default value is 82 and is typically suited to 
-  -- making small changes to the tempo of music; for larger changes 
-  -- (e.g. a factor of 2), 50 ms may give a better result.
-  if factor_change<1 then 
-    factor_change=1/factor_change 
-  end
-  local segment=82-15*factor_change
-  if segment<30 then 
-    segment=30
-  end
-  os.cmd(string.format("sox %s %s tempo %f %f",fname,fname2,ratio,segment))
+  os.cmd(string.format("sox %s %s tempo -m %f",fname,fname2,new_tempo/old_tempo))
   return fname2
 end
 
@@ -508,6 +495,14 @@ function run()
   for i,v in ipairs(arg) do
     if string.find(v,"input") and string.find(v,"tempo") then
       input_tempo=tonumber(arg[i+1]) or input_tempo
+    elseif string.find(v,"server") and string.find(v,"started") then
+      server_started=true
+    elseif string.find(v,"retempo") and string.find(v,"repitch") then
+      retempo_switch=RETEMPO_SPEED
+    elseif string.find(v,"retempo") and string.find(v,"stretch") then
+      retempo_switch=RETEMPO_STRETCH
+    elseif string.find(v,"retempo") and string.find(v,"none") then
+      retempo_switch=RETEMPO_NONE
     elseif string.find(v,"save") and string.find(v,"onset") then
       save_onset=true
     elseif string.find(v,"strip") and string.find(v,"silence") then
@@ -547,14 +542,6 @@ function run()
       p_reverb=tonumber(arg[i+1]) or p_reverb
     elseif string.find(v,"help") then
       print_help=true
-    elseif string.find(v,"server") and string.find(v,"started") then
-      server_started=true
-    elseif string.find(v,"retempo") and string.find(v,"speed") then
-      retempo_switch=RETEMPO_SPEED
-    elseif string.find(v,"retempo") and string.find(v,"stretch") then
-      retempo_switch=RETEMPO_STRETCH
-    elseif string.find(v,"retempo") and string.find(v,"none") then
-      retempo_switch=RETEMPO_NONE
     elseif string.find(v,"-b") then
       target_beats=tonumber(arg[i+1])
     elseif string.find(v,"-t") then
@@ -619,13 +606,34 @@ function run()
         os.execute("sleep 0.1")
       end
       -- convert to 48000
+      original_fname=fname
       fname=audio.sample_rate(fname,48000,2)
       fname=audio.silence_trim(fname)
-      local bpm=input_tempo or audio.tempo(fname)
+      local bpm=original_fname:match("_bpm%d+")
+      print("matched bpm",bpm)
+      if bpm~=nil then
+        bpm=bpm:match("%d+")
+      end
+      if bpm==nil then 
+         bpm=input_tempo or audio.tempo(fname)
+      end
       print("bpm: "..bpm)
+
       fname=audio.silence_add(fname,0.1)
       local beats=math.floor(audio.length(fname)/(60/bpm))
       fname=audio.trim(fname,0,beats*60/bpm)
+
+      if retempo_switch~=RETEMPO_NONE and new_tempo~=nil and new_tempo~=bpm  then 
+        print("retempo_switch",retempo_switch)
+        if retempo_switch==RETEMPO_SPEED then 
+          fname=audio.retempo_speed(fname,bpm,new_tempo)
+        elseif retempo_switch==RETEMPO_STRETCH then 
+          print("stretching temp",bpm,new_tempo)
+          fname=audio.retempo_stretch(fname,bpm,new_tempo)
+        end
+        bpm=new_tempo
+      end
+      
       beats=audio.length(fname)/(60/bpm)
       while beats<target_beats do 
         fname=audio.repeat_n(fname,2)
@@ -711,13 +719,6 @@ function run()
         local piece=audio.stutter(fname_original,60/bpm/4,60/bpm*beat_start,12,crossfade,0.001,nil)
         piece=audio.supercollider_effect(piece,"lpf_rampup")
         fname=audio.paste(fname,piece,60/bpm/4*math.random(12,total_beats*4-16),crossfade)
-      end
-      if retempo_switch~=RETEMPO_NONE and new_tempo~=nil and new_tempo~=bpm  then 
-        if retempo_switch==RETEMPO_SPEED then 
-          fname=audio.retempo_speed(fname,bpm,new_tempo)
-        elseif retempo_switch==RETEMPO_STRETCH then 
-          fname=audio.retempo_stretch(fname,bpm/new_tempo)
-        end
       end
       fname=audio.supercollider_effect(fname,"filter_in_out")
       if tapedeck then 

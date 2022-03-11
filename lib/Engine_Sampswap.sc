@@ -75,6 +75,7 @@ Engine_Sampswap : CroneEngine {
         this.addCommand("load_track","isf", { arg msg;
             var key=msg[1];
             var fname=msg[2];
+            var amp=msg[3];
             Buffer.read(Server.default, fname,action:{ arg buf;
                 ["loading",buf].postln;
                 if (sampleBuffSampswap.at(key).notNil,{
@@ -82,17 +83,37 @@ Engine_Sampswap : CroneEngine {
                 });
                 sampleBuffSampswap.put(key,buf);
                 if (playerSampswap.at(key).notNil,{
-                    playerSampswap.at(key).set(\bufnum,buf.bufnum);
+                    playerSampswap.at(key).set(\bufnum,buf.bufnum,\amp,amp);
                 },{
-                    playerSampswap.put(key,Synth("playerSampswap",[\bufnum,buf.bufnum,\t_trig,1,\amp,msg[3]]));
+                    playerSampswap.put(key,Synth("playerSampswap",[\bufnum,buf.bufnum,\t_trig,1,\amp,amp]));
                 })
             }); 
         });
 
-        this.addCommand("tozero","i", { arg msg;
-            var key=msg[1].asInteger;
-            if (playerSampswap.at(key).notNil,{
-                playerSampswap.at(key).set(\t_trig,1);
+        this.addCommand("tozero1","i", { arg msg;
+            if (playerSampswap.at(msg[1]).notNil,{
+                playerSampswap.at(msg[1]).set(\t_trig,1);
+            });
+        });
+
+        this.addCommand("tozero2","ii", { arg msg;
+            if (playerSampswap.at(msg[1]).notNil,{
+                playerSampswap.at(msg[1]).set(\t_trig,1);
+            });
+            if (playerSampswap.at(msg[2]).notNil,{
+                playerSampswap.at(msg[2]).set(\t_trig,1);
+            });
+        });
+
+        this.addCommand("tozero3","iii", { arg msg;
+            if (playerSampswap.at(msg[1]).notNil,{
+                playerSampswap.at(msg[1]).set(\t_trig,1);
+            });
+            if (playerSampswap.at(msg[2]).notNil,{
+                playerSampswap.at(msg[2]).set(\t_trig,1);
+            });
+            if (playerSampswap.at(msg[3]).notNil,{
+                playerSampswap.at(msg[3]).set(\t_trig,1);
             });
         });
 

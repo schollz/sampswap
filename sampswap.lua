@@ -58,8 +58,19 @@ function init()
         end
       end
       lattice_beats=lattice_beats+1
+      local tozero={}
       for i,smpl in ipairs(sample) do
-        smpl:update_beat(lattice_beats)
+        if smpl:update_beat(lattice_beats) then 
+          table.insert(tozero,i)
+        end
+      end
+      if #tozero==1 then 
+        print("tozero1",tozero[1])
+        engine.tozero1(tozero[1])
+      elseif #tozero==2 then 
+        engine.tozero2(tozero[1],tozero[2])
+      elseif #tozero==3 then 
+        engine.tozero3(tozero[1],tozero[2],tozero[3])
       end
       global_progress_file_exists=util.file_exists(PROGRESSFILE)
       if global_progress_file_exists then 
@@ -100,7 +111,7 @@ function enc(k,d)
     samplei=util.clamp(samplei+d,1,3)
   elseif k==2 then
     for i=1,3 do 
-      sample[i]:option_sel_delta(d)
+      sample[i]:option_sel_delta(sampleid,d)
     end
   elseif k==3 then
     sample[samplei]:option_set_delta(d)
