@@ -78,6 +78,7 @@ function init()
   lattice:start()
 
   -- startup scripts
+
   startup_clock=clock.run(function()
     os.execute(_path.code.."sampswap/lib/install.sh 2>&1 | tee /tmp/sampswap.log &")
   end)
