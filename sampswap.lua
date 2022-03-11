@@ -132,17 +132,43 @@ function key(k,z)
 end
 
 function redraw()
-  screen.clear()
-  screen.aa(0)
   if loading then
+    local progress_val=util.os_capture("wc -l < /tmp/sampswap.log")
+    progress_val=tonumber(progress_val)
+    progress_val=progress_val or 0 
+    progress_val=util.round(progress_val/71*100)
+    if progress_val==last_progress_val then 
+      do return end 
+    end
+    screen.clear()
+    screen.aa(0)
+    last_progress_val=progress_val
+    local slider=UI.Slider.new(0,0,128,9,0,0,100,{},"right")
+    screen.level(15)
+    slider.active=true
+    slider:set_value(progress_val)
+    slider:redraw()
+    screen.update()
+    screen.blend_mode(1)
+    screen.level(15)
+    screen.move(64,7)
+    screen.text_center("loading...")
+    screen.update()
+    screen.blend_mode(0)
     screen.level(15)
     screen.move(64,18)
-    screen.text_center("loading, please wait . . . ")
+    screen.text_center(util.os_capture("cat /tmp/sampswap.log | grep . | cat | cut -c -30 | tail -n5  | head -n1"))
     screen.move(64,28)
-    screen.text_center(util.os_capture("tail -n2 /tmp/sampswap.log | head -n1"))
+    screen.text_center(util.os_capture("cat /tmp/sampswap.log | grep . | cat | cut -c -30 | tail -n4 | head -n1"))
     screen.move(64,38)
-    screen.text_center(util.os_capture("tail -n1 /tmp/sampswap.log"))
+    screen.text_center(util.os_capture("cat /tmp/sampswap.log | grep . | cat | cut -c -30 | tail -n3 | head -n1"))
+    screen.move(64,48)
+    screen.text_center(util.os_capture("cat /tmp/sampswap.log | grep . | cat | cut -c -30 | tail -n2 | head -n1"))
+    screen.move(64,58)
+    screen.text_center(util.os_capture("cat /tmp/sampswap.log | grep . | cat | cut -c -30 | tail -n1"))
   else
+    screen.clear()
+    screen.aa(0)
     if sample~=nil then 
       sample[samplei]:redraw(sample,progress_current)
     end
