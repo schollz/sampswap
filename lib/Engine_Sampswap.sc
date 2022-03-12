@@ -25,7 +25,7 @@ Engine_Sampswap : CroneEngine {
         serverOptions.sampleRate=48000;
         nrtServer = Server(\nrt, NetAddr("127.0.0.1", 47114), options:serverOptions);
         SynthDef("lpf_rampup", {
-            arg out=0,  dur=30;
+            arg out=0,  dur=30, f1,f2,f3,f4;
             var duration=BufDur.ir(0);
             var snd = PlayBuf.ar(2,0,BufRateScale.kr(0));
             snd=LPF.ar(snd,XLine.kr(200,20000,duration));
@@ -33,7 +33,7 @@ Engine_Sampswap : CroneEngine {
             Out.ar(out, snd);
         }).load(nrtServer);
         SynthDef("lpf_rampdown", {
-            arg out=0,  dur=30;
+            arg out=0,  dur=30, f1,f2,f3,f4;
             var duration=BufDur.ir(0);
             var snd = PlayBuf.ar(2,0,BufRateScale.kr(0));
             snd=LPF.ar(snd,XLine.kr(20000,200,duration));
@@ -41,7 +41,7 @@ Engine_Sampswap : CroneEngine {
             Out.ar(out, snd);
         }).load(nrtServer);
         SynthDef("dec_ramp", {
-            arg out=0,  dur=30;
+            arg out=0,  dur=30, f1,f2,f3,f4;
             var duration=BufDur.ir(0);
             var snd = PlayBuf.ar(2,0,BufRateScale.kr(0));
             snd=SelectX.ar(Line.kr(0,1,duration/4),[snd,Decimator.ar(snd,8000,8)]);
@@ -49,7 +49,7 @@ Engine_Sampswap : CroneEngine {
             Out.ar(out, snd);
         }).load(nrtServer);
         SynthDef("dec", {
-            arg out=0,  dur=30;
+            arg out=0,  dur=30, f1,f2,f3,f4;
             var duration=BufDur.ir(0);
             var snd = PlayBuf.ar(2,0,BufRateScale.kr(0));
             snd=Decimator.ar(snd,8000,8);
@@ -57,7 +57,7 @@ Engine_Sampswap : CroneEngine {
             Out.ar(out, snd);
         }).load(nrtServer);
         SynthDef("reverberate", {
-            arg out=0,  dur=30;
+            arg out=0,  dur=30, f1,f2,f3,f4;
             var duration=BufDur.ir(0);
             var snd = PlayBuf.ar(2,0,BufRateScale.kr(0));
             snd=SelectX.ar(XLine.kr(0,1,duration/4),[snd,Greyhole.ar(snd* EnvGen.ar(Env.new([0, 1, 1, 0], [0.1,dur-0.2,0.1]), doneAction:2))]);
@@ -66,18 +66,18 @@ Engine_Sampswap : CroneEngine {
             Out.ar(out, snd);
         }).load(nrtServer);
         SynthDef("filter_in_out", {
-            arg out=0,  dur=30;
+            arg out=0,  dur=30, f1,f2,f3,f4;
             var duration=BufDur.ir(0);
             var snd = PlayBuf.ar(2,0,BufRateScale.kr(0));
             snd = RLPF.ar(snd,
-                LinExp.kr(EnvGen.kr(Env.new([0.1, 1, 1, 0.1], [2,dur-4,2])),0.1,1,100,20000),
+                LinExp.kr(EnvGen.kr(Env.new([0.1, 1, 1, 0.1], [f1,dur-f1-f2,f2])),0.1,1,100,20000),
                 0.6);
             snd = snd * EnvGen.ar(Env.new([0, 1, 1, 0], [0.005,dur-0.01,0.005]), doneAction:2);
             Out.ar(out, snd);
         }).load(nrtServer);
 
         scoreFn={
-            arg inFile,outFile,synthDefinition,durationScaling,oscCallbackPort;
+            arg inFile,outFile,synthDefinition,durationScaling,oscCallbackPort,f1,f2,f3,f4;
             Buffer.read(mainServer,inFile,action:{
                 arg buf;
                 Routine {
@@ -87,7 +87,7 @@ Engine_Sampswap : CroneEngine {
 
                     "defining score".postln;
                     score = [
-                        [0.0, ['/s_new', synthDefinition, 1000, 0, 0,  \dur,duration]],
+                        [0.0, ['/s_new', synthDefinition, 1000, 0, 0, \dur,duration,\f1,f1,\f2,f2,\f3,f3,\f4,f4]],
                         [0.0, ['/b_allocRead', 0, inFile]],
                         [duration, [\c_set, 0, 0]] // dummy to end
                     ];
@@ -119,8 +119,12 @@ Engine_Sampswap : CroneEngine {
                     var synthDefinition=msg[3].asSymbol;
                     var durationScaling=msg[4].asFloat;
                     var oscCallbackPort=msg[5].asInteger;
+                    var f1=msg[6].asFloat;
+                    var f2=msg[7].asFloat;
+                    var f3=msg[8].asFloat;
+                    var f4=msg[9].asFloat;
                     [msg, time, addr, recvPort].postln;
-                    scoreFn.value(inFile,outFile,synthDefinition,durationScaling,oscCallbackPort);
+                    scoreFn.value(inFile,outFile,synthDefinition,durationScaling,oscCallbackPort,f1,f2,f3,f4);
                     "finished".postln;
                 }, '/score',recvPort:47113);
                 1.wait;

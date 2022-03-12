@@ -54,7 +54,7 @@ function Sample:new (o)
     {"revreverb",5,10,0},
   }
   local i=o.id
-  params:add_group("loop "..i,7+#o.break_options)
+  params:add_group("loop "..i,9+#o.break_options)
   params:add{type='binary',name="make beat",id='break_make'..i,behavior='trigger',action=function(v) sampleswap(i) end}
   params:add_file("break_originalfile"..i,"original file",_path.audio.."sampswap/amen_resampled.wav")
   params:hide("break_originalfile"..i)
@@ -78,7 +78,7 @@ function Sample:new (o)
     end
   end)
   params:add{type="number",id="break_beats"..i,name="beats",min=16,max=128,default=32}
-  params:add{type="number",id="break_beatsoffset"..i,name="beat off",min=0,max=16,default=0}
+  params:add{type="number",id="break_beatsoffset"..i,name="offset",min=0,max=16,default=0}
   for _,op in ipairs(o.break_options) do
     params:add{type="number",id="break_"..op[1]..i,name=op[1],min=0,max=op[3],default=op[2]}
   end
@@ -87,6 +87,8 @@ function Sample:new (o)
       engine.amp(i,x/100)
     end
   end)
+  params:add{type="number",id="break_filter_in"..i,name="filter in",min=0,max=16,default=4}
+  params:add{type="number",id="break_filter_out"..i,name="filter out",min=0,max=16,default=4}
   o.retempo_options={"repitch","stretch","none"}
   params:add_option("break_retempo"..i,"tempo changing",o.retempo_options)
 
@@ -183,7 +185,7 @@ function Sample:update_audio_file()
       closet_bpm[1]=bpm
     end
   end
-  if not string.find(fname,"_sampswap_") then 
+  if not string.find(fname,"_sampswap_") then
     params:set("break_inputtempo"..self.id,closet_bpm[1])
     local bpm=nil
     for word in string.gmatch(fname,'([^_]+)') do
@@ -200,7 +202,6 @@ function Sample:update_audio_file()
     end
     self.beat_num=util.round(self.file_seconds/(60/bpm))
   end
-
 
   self:determine_index_max()
   self.loaded=false
@@ -244,23 +245,23 @@ end
 function Sample:option_set_delta_index(d)
   print(self.filename,d)
   if not string.find(self.filename,"_sampswap_") then
-    do return end 
+    do return end
   end
   local index_cur=0
-  for word in string.gmatch(self.filename, '([^_]+)') do
+  for word in string.gmatch(self.filename,'([^_]+)') do
     local num=string.match(word,"%d+")
-    if num~=nil then 
+    if num~=nil then
       index_cur=tonumber(num)
     end
   end
   print(index_cur)
-  if index_cur==0 then 
-    do return end 
+  if index_cur==0 then
+    do return end
   end
-  local index_next=index_cur+d 
+  local index_next=index_cur+d
   print(index_next)
-  if index_next > self.index_max or index_next<1 then 
-    do return end 
+  if index_next>self.index_max or index_next<1 then
+    do return end
   end
   local filename_next=self:path_from_index(index_next)
   self.dont_align=true
@@ -315,6 +316,8 @@ function Sample:swap()
     -- use input tempo only if building from new file
     cmd=cmd.." -input-tempo "..params:get("break_inputtempo"..self.id)
   end
+  cmd=cmd.." -filter-in "..params:get("break_filter_in")
+  cmd=cmd.." -filter-out "..params:get("break_filter_out")
   cmd=cmd.." -t "..tempo.." -b "..params:get("break_beats"..self.id)
   cmd=cmd.." -o "..self.making_file.." ".." -i "..filename
   for _,op in ipairs(self.break_options) do

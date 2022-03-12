@@ -470,13 +470,17 @@ function audio.stutter(fname,stutter_length,pos_start,count,crossfade_piece,cros
 	return fname2
 end
 
-function audio.supercollider_effect(fname,effect)
+function audio.supercollider_effect(fname,effect,f1,f2,f3,f4)
   local fname2=string.random_filename()
   local durationScaling=1 
   if effect=="reverberate" then 
     durationScaling=4
   end
-  os.cmd(string.format(SENDOSC..' --host 127.0.0.1 --addr "/score" --port 47113 --recv-port 47888 -s %s -s %s -s %s -s %s -s 47888',fname,fname2,effect,durationScaling))
+  f1=f1 or 0
+  f2=f2 or 0
+  f3=f3 or 0
+  f4=f4 or 0
+  os.cmd(string.format(SENDOSC..' --host 127.0.0.1 --addr "/score" --port 47113 --recv-port 47888 -s %s -s %s -s %s -s %s -s 47888 -s %f -s %f -s %f -s %f',fname,fname2,effect,durationScaling,f1,f2,f3,f4))
   return fname2
 end
 
@@ -501,11 +505,17 @@ function run()
   local RETEMPO_SPEED=1 
   local RETEMPO_STRETCH=2
   local RETEMPO_NONE=3
+  local filter_in_beats=4
+  local filter_out_beats=4
   for i,v in ipairs(arg) do
     if string.find(v,"input") and string.find(v,"tempo") then
       input_tempo=tonumber(arg[i+1]) or input_tempo
     elseif string.find(v,"server") and string.find(v,"started") then
       server_started=true
+    elseif string.find(v,"filter") and string.find(v,"in") then
+      filter_in_beats=tonumber(arg[i+1])
+    elseif string.find(v,"filter") and string.find(v,"out") then
+      filter_out_beats=tonumber(arg[i+1])
     elseif string.find(v,"retempo") and string.find(v,"repitch") then
       retempo_switch=RETEMPO_SPEED
     elseif string.find(v,"retempo") and string.find(v,"stretch") then
@@ -737,7 +747,7 @@ function run()
         bpm=new_tempo
       end
 
-      fname=audio.supercollider_effect(fname,"filter_in_out")
+      fname=audio.supercollider_effect(fname,"filter_in_out",filter_in_beats*60/bpm,filter_out_beats*60/bpm)
       if tapedeck then 
         fname=audio.supercollider_effect(fname,"tapedeck")
       end
