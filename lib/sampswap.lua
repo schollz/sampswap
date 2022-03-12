@@ -363,6 +363,9 @@ end
 -- copy_and_paste2 finds best positionn, but does not keep timing
 function audio.copy_and_paste2(fname,copy_start,copy_stop,paste_start)
 	local copy_length=copy_stop-copy_start
+  if copy_length==nil or copy_length<0.05 then 
+    do return fname end 
+  end
 	local piece=string.random_filename()
 	local part1=string.random_filename()
 	local part2=string.random_filename()
@@ -379,6 +382,9 @@ end
 
 function audio.copy_and_paste(fname,copy_start,copy_stop,paste_start,crossfade)
 	local copy_length=copy_stop-copy_start
+  if copy_length==nil or copy_length<0.05 then 
+    do return fname end 
+  end
 	local piece=string.random_filename()
 	local part1=string.random_filename()
 	local part2=string.random_filename()
@@ -400,6 +406,9 @@ end
 -- in addition to its current length
 function audio.paste(fname,piece,paste_start,crossfade)
 	local copy_length=audio.length(piece)
+  if copy_length==nil then 
+    do return fname end 
+  end
 	local part1=string.random_filename()
 	local part2=string.random_filename()
 	local fname2=string.random_filename()

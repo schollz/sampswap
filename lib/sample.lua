@@ -41,7 +41,6 @@ function Sample:new (o)
   o.playing=false
   o.loaded=false
   o.beat_num=0
-  o.index_cur=0
   o.index_max=0
   o.debounce_load=nil
   o.selected=o.id==1
@@ -132,7 +131,10 @@ function Sample:update()
         print(string.format("%d: loading %s",self.id,params:get("break_file"..self.id)))
         engine.load_track(self.id,params:get("break_file"..self.id),params:get("break_amp"..self.id)/100)
         self.loaded=true
-        self.align_track=true
+        if self.dont_align==nil then
+          self.align_track=true
+        end
+        self.dont_align=nil
       end
     end
   end
@@ -186,16 +188,17 @@ function Sample:update_audio_file()
   local bpm=nil
   for word in string.gmatch(fname,'([^_]+)') do
     if string.find(word,"bpm") then
-      bpm=fname:match("bpm%d+")
+      bpm=word:match("%d+")
     end
   end
   if bpm~=nil then
-    bpm=bpm:match("%d+")
     if bpm~=nil then
       params:set("break_inputtempo"..self.id,tonumber(bpm))
     end
+  else
+    bpm=closet_bpm[1]
   end
-  self.beat_num=util.round(self.file_seconds/(60/closet_bpm[1]))
+  self.beat_num=util.round(self.file_seconds/(60/bpm))
   self:determine_index_max()
   self.loaded=false
   if self.playing then
@@ -219,6 +222,7 @@ end
 function Sample:option_set_delta(d)
   if self.op==1 then
     -- TODO: switch loop based on the produced loops
+    self:option_set_delta_index(d)
   elseif self.op==2 then
     params:delta("break_inputtempo"..self.id,d)
   elseif self.op==3 then
@@ -232,6 +236,32 @@ function Sample:option_set_delta(d)
     params:delta("break_"..self.break_options[14-self.op][1]..self.id,d)
     self.break_options[14-self.op][4]=5
   end
+end
+
+function Sample:option_set_delta_index(d)
+  print(self.filename,d)
+  if not string.find(self.filename,"_sampswap_") then
+    do return end 
+  end
+  local index_cur=0
+  for word in string.gmatch(self.filename, '([^_]+)') do
+    local num=string.match(word,"%d+")
+    if num~=nil then 
+      index_cur=tonumber(num)
+    end
+  end
+  print(index_cur)
+  if index_cur==0 then 
+    do return end 
+  end
+  local index_next=index_cur+d 
+  print(index_next)
+  if index_next > self.index_max or index_next<1 then 
+    do return end 
+  end
+  local filename_next=self:path_from_index(index_next)
+  self.dont_align=true
+  params:set("break_file"..self.id,filename_next)
 end
 
 function Sample:path_from_index(i)

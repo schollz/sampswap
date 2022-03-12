@@ -48,6 +48,5 @@ else
 fi
 
 ## cleanup
-echo "cleaning up..."		
-/home/we/dust/code/sampswap/lib/cleanup.sh
+rm -rf /tmp/sampswap
 mkdir -p /tmp/sampswap

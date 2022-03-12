@@ -12,7 +12,7 @@
 -- E changes sample
 local lattice_=require("lattice")
 local sample_=include("sampswap/lib/sample")
-local crowseq=include("sampswap/lib/crowseq")
+-- local crowseq=include("sampswap/lib/crowseq")
 local UI=require("ui")
 
 engine.name="Sampswap"
@@ -30,9 +30,7 @@ function init()
   samplei=1
   sample=nil
 
-  if norns.crow.connected() then
-    cs=crowseq:init()
-  end
+
 
   current_tempo=clock.get_tempo()
   lattice=lattice_:new()
@@ -77,10 +75,18 @@ function init()
     end,
     division=1/4
   }
+  -- if norns.crow.connected() then
+  --   cs=crowseq:new()
+  --   crowpattern=lattice:new_pattern{
+  --     action=function(t)
+  --       cs:emit()
+  --     end,
+  --     division=1/16,
+  --   }
+  -- end
   lattice:start()
 
   -- startup scripts
-
   startup_clock=clock.run(function()
     os.execute(_path.code.."sampswap/lib/install.sh 2>&1 | tee /tmp/sampswap.log &")
   end)
