@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# link aubioonset if not already
-echo "linking libraries"
-sudo ldconfig
-
 # install sox
 if ! command -v sox &> /dev/null
 then
@@ -14,13 +10,6 @@ if ! command -v sox &> /dev/null
 then
 	echo "installing sox from static compiled version"
 	cd /tmp && wget https://github.com/schollz/makebreakbeat/releases/download/v0.1.0/sox && chmod +x sox && sudo mv sox /usr/local/bin/
-fi
-
-# install aubioonset if not already
-if ! command -v aubioonset &> /dev/null
-then
-	echo "installing aubio"
-	cd /tmp/ && git clone https://github.com/aubio/aubio && cd aubio && sed -i 's/curl -so/curl -k -so/g' scripts/get_waf.sh && ./scripts/get_waf.sh && ./waf configure && ./waf build && sudo ./waf install && cd /tmp && rm -rf aubio
 fi
 
 # install portedplugins if not already
@@ -62,5 +51,3 @@ fi
 echo "cleaning up..."		
 /home/we/dust/code/sampswap/lib/cleanup.sh
 mkdir -p /tmp/sampswap
-## startup server
-##cd /home/we/dust/code/sampswap/lib && sclang sampswap_nrt.supercollider &

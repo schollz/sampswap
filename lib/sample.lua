@@ -46,13 +46,13 @@ function Sample:new (o)
   o.debounce_load=nil
   o.selected=o.id==1
   o.break_options={
-    {"amp",25,100,5},
-    {"jump",20,50,5},
-    {"reverse",5,15,5},
-    {"stutter",10,30,5},
-    {"pitch",1,10,5},
-    {"reverb",1,10,5},
-    {"revreverb",5,10,5},
+    {"amp",25,100,0},
+    {"jump",20,50,0},
+    {"reverse",5,15,0},
+    {"stutter",10,30,0},
+    {"pitch",1,10,0},
+    {"reverb",1,10,0},
+    {"revreverb",5,10,0},
   }
   local i=o.id
   params:add_group("loop "..i,8+#o.break_options)
@@ -66,7 +66,7 @@ function Sample:new (o)
   params:add_file("break_file"..i,"load sample",_path.audio.."sampswap/amen_resampled.wav")
   params:set_action("break_file"..i,function(x)
     print(i,"got new file: ",x)
-    if not string.find(x,"_sampswap_") then 
+    if not string.find(x,"_sampswap_") then
       print("setting original file to "..x)
       params:set("break_originalfile"..i,x)
     end
@@ -74,7 +74,7 @@ function Sample:new (o)
   end)
   params:add{type="number",id="break_inputtempo"..i,name="file tempo",min=30,max=250,default=120}
   params:set_action("break_inputtempo"..i,function(x)
-    if o.file_seconds~=nil then 
+    if o.file_seconds~=nil then
       o.beat_num=util.round(o.file_seconds/(60/x))
     end
   end)
@@ -100,25 +100,25 @@ function Sample:update_beat(beats)
   if self.beat_num==0 or self.filename==nil or beats==nil then
     do return end
   end
-  if self.align_track then 
+  if self.align_track then
     self.align_track=nil
     engine.tozero1(self.id)
   end
   if (beats-params:get("break_beatsoffset"..self.id))%params:get("break_beats"..self.id)==0 then
     print(string.format("sample %d: resetting",self.id))
-    do return true end 
+    do return true end
   end
 end
 
 function Sample:update()
-  if self.making_file~=nil and global_progress_file_exists==false then 
-    if self.debounce_making_file>0 then 
-      self.debounce_making_file=self.debounce_making_file-1 
-      if self.debounce_making_file==0 then 
+  if self.making_file~=nil and global_progress_file_exists==false then
+    if self.debounce_making_file>0 then
+      self.debounce_making_file=self.debounce_making_file-1
+      if self.debounce_making_file==0 then
         self:determine_index_max()
         params:set("break_file"..self.id,self.making_file)
         self.making_file=nil
-        if self.playing then 
+        if self.playing then
           self.debounce_load=4
         end
       end
@@ -142,7 +142,7 @@ function Sample:toggle_playing()
   print(self.id,"toggle_playing")
   self.playing=not self.playing
   engine.amp(self.id,self.playing and params:get("break_amp"..self.id)/100 or 0)
-  if self.playing then 
+  if self.playing then
     params:write()
   end
   if not self.loaded then
@@ -157,13 +157,13 @@ function Sample:update_audio_file()
     do return end
   end
   self.folder,self.filename,_=string.match(fname,"(.-)([^\\/]-%.?([^%.\\/]*))$")
-  for token in string.gmatch(self.folder, "[^/]+") do
-   self.folderend=token
+  for token in string.gmatch(self.folder,"[^/]+") do
+    self.folderend=token
   end
   local fname=params:get("break_file"..self.id)
   local fname_trimmed=silence_trim(fname)
   local s=""
-  if util.file_exists(fname_trimmed) then 
+  if util.file_exists(fname_trimmed) then
     s=util.os_capture("sox "..fname_trimmed.." -n stat 2>&1  | grep Length | awk '{print $3}'")
     os.execute("rm -f "..fname_trimmed)
   else
@@ -171,21 +171,21 @@ function Sample:update_audio_file()
   end
   self.file_seconds=tonumber(s)
   local closet_bpm={0,100000}
-  for bpm=100,200 do 
+  for bpm=100,200 do
     local measures=self.file_seconds/((60/bpm)*4)
     local measured_rounded=util.round(measures)
     local dif=math.abs(measured_rounded-measures)
     dif=dif-(measured_rounded%4==0 and measured_rounded/60 or 0)
     --print(bpm,measured_rounded,measures,dif)
-    if dif<closet_bpm[2] then 
-      closet_bpm[2]=dif 
+    if dif<closet_bpm[2] then
+      closet_bpm[2]=dif
       closet_bpm[1]=bpm
     end
   end
   params:set("break_inputtempo"..self.id,closet_bpm[1])
   local bpm=nil
-  for word in string.gmatch(fname, '([^_]+)') do
-    if string.find(word,"bpm") then 
+  for word in string.gmatch(fname,'([^_]+)') do
+    if string.find(word,"bpm") then
       bpm=fname:match("bpm%d+")
     end
   end
@@ -201,8 +201,8 @@ function Sample:update_audio_file()
   if self.playing then
     self.debounce_load=4
   end
-  -- find the file index in the list 
-  for i, fname_in_list in ipairs(self.file_list) do 
+  -- find the file index in the list
+  for i,fname_in_list in ipairs(self.file_list) do
     if fname==fname_in_list then
       self.file_index=i
     end
@@ -211,23 +211,23 @@ end
 
 function Sample:option_sel_delta(i,d)
   self.op=util.clamp(self.op+d,1,13)
-  if self.op>6 and self.id==i then 
+  if self.op>6 and self.id==i then
     self.break_options[14-self.op][4]=5
   end
 end
 
 function Sample:option_set_delta(d)
-  if self.op==1 then 
+  if self.op==1 then
     -- TODO: switch loop based on the produced loops
-  elseif self.op==2 then 
+  elseif self.op==2 then
     params:delta("break_inputtempo"..self.id,d)
-  elseif self.op==3 then 
+  elseif self.op==3 then
     params:delta("break_beats"..self.id,d)
-  elseif self.op==4 then 
+  elseif self.op==4 then
     params:delta("break_beatsoffset"..self.id,d)
-  elseif self.op==5 then 
+  elseif self.op==5 then
     params:delta("break_retempo"..self.id,d)
-  elseif self.op==6 then 
+  elseif self.op==6 then
   else
     params:delta("break_"..self.break_options[14-self.op][1]..self.id,d)
     self.break_options[14-self.op][4]=5
@@ -272,13 +272,13 @@ function Sample:swap()
   params:write()
   local tempo=math.floor(clock.get_tempo())
   self.making_file=self:path_from_index(self.index_max+1)
-  if self.making_file==nil then 
-    do return end 
+  if self.making_file==nil then
+    do return end
   end
   self.debounce_making_file=10
   local filename=params:get("break_originalfile"..self.id)
   local cmd="cd ".._path.code.."sampswap/lib/ && lua sampswap.lua --server-started"
-  if filename==params:get("break_file"..self.id) then 
+  if filename==params:get("break_file"..self.id) then
     -- use input tempo only if building from new file
     cmd=cmd.." -input-tempo "..params:get("break_inputtempo"..self.id)
   end
@@ -301,10 +301,9 @@ function Sample:swap()
   end)
 end
 
-
 function Sample:redraw(smp,progress_val)
-  if self.filename==nil then 
-    do return end 
+  if self.filename==nil then
+    do return end
   end
   progress_val=progress_val or 100
   local slider=UI.Slider.new(0,0,128,9,0,0,100,{},"right")
@@ -325,7 +324,7 @@ function Sample:redraw(smp,progress_val)
   screen.update()
   screen.blend_mode(0)
   local sw=14
-  for i=1,3 do 
+  for i=1,3 do
     local selected=self.id==i
     local x=128-sw
     local y=9+sw*(i-1)+i*2
@@ -339,23 +338,22 @@ function Sample:redraw(smp,progress_val)
     screen.stroke()
   end
 
-  
   local udsw=9
-  for i=1,7 do 
+  for i=1,7 do
     local x=128-sw-(i*udsw)-i-1
     local y=10
     local bar=UI.Slider.new(x,y,udsw,64-9*2+1,0,0,self.break_options[i][3],{},"up")
     bar:set_value(params:get("break_"..self.break_options[i][1]..self.id))
     bar.active=self.op==13-(i-1)
     bar:redraw()
-    if self.break_options[i][4]>0 then 
+    if self.break_options[i][4]>0 then
       screen.level(self.break_options[i][4])
       screen.move(x+udsw/2,63)
-      screen.text_center(self.break_options[i][1])  
+      screen.text_center(self.break_options[i][1])
       self.break_options[i][4]=self.break_options[i][4]-1
     end
   end
-  
+
   screen.level(15)
   do
     local y=16
@@ -384,8 +382,7 @@ function Sample:redraw(smp,progress_val)
     screen.level(self.op==6 and 15 or 5)
     -- TODO: allow selecting multiple options screen.text("f+t+l")
   end
-  
-  
+
 end
 
 return Sample
