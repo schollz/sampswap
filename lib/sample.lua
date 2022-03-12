@@ -54,7 +54,7 @@ function Sample:new (o)
     {"revreverb",5,10,0},
   }
   local i=o.id
-  params:add_group("loop "..i,8+#o.break_options)
+  params:add_group("loop "..i,7+#o.break_options)
   params:add{type='binary',name="make beat",id='break_make'..i,behavior='trigger',action=function(v) sampleswap(i) end}
   params:add_file("break_originalfile"..i,"original file",_path.audio.."sampswap/amen_resampled.wav")
   params:hide("break_originalfile"..i)
@@ -87,7 +87,6 @@ function Sample:new (o)
       engine.amp(i,x/100)
     end
   end)
-  params:add_option("break_tapedeck"..i,"tapedeck",{"no","yes"})
   o.retempo_options={"repitch","stretch","none"}
   params:add_option("break_retempo"..i,"tempo changing",o.retempo_options)
 
@@ -104,7 +103,7 @@ function Sample:update_beat(beats)
     engine.tozero1(self.id)
   end
   if (beats-params:get("break_beatsoffset"..self.id))%params:get("break_beats"..self.id)==0 then
-    print(string.format("sample %d: resetting",self.id))
+    --print(string.format("sample %d: resetting",self.id))
     do return true end
   end
 end
@@ -184,21 +183,25 @@ function Sample:update_audio_file()
       closet_bpm[1]=bpm
     end
   end
-  params:set("break_inputtempo"..self.id,closet_bpm[1])
-  local bpm=nil
-  for word in string.gmatch(fname,'([^_]+)') do
-    if string.find(word,"bpm") then
-      bpm=word:match("%d+")
+  if not string.find(fname,"_sampswap_") then 
+    params:set("break_inputtempo"..self.id,closet_bpm[1])
+    local bpm=nil
+    for word in string.gmatch(fname,'([^_]+)') do
+      if string.find(word,"bpm") then
+        bpm=word:match("%d+")
+      end
     end
-  end
-  if bpm~=nil then
     if bpm~=nil then
-      params:set("break_inputtempo"..self.id,tonumber(bpm))
+      if bpm~=nil then
+        params:set("break_inputtempo"..self.id,tonumber(bpm))
+      end
+    else
+      bpm=closet_bpm[1]
     end
-  else
-    bpm=closet_bpm[1]
+    self.beat_num=util.round(self.file_seconds/(60/bpm))
   end
-  self.beat_num=util.round(self.file_seconds/(60/bpm))
+
+
   self:determine_index_max()
   self.loaded=false
   if self.playing then
@@ -224,9 +227,9 @@ function Sample:option_set_delta(d)
     -- TODO: switch loop based on the produced loops
     self:option_set_delta_index(d)
   elseif self.op==2 then
-    params:delta("break_inputtempo"..self.id,d)
-  elseif self.op==3 then
     params:delta("break_beats"..self.id,d)
+  elseif self.op==3 then
+    params:delta("clock_tempo",d)
   elseif self.op==4 then
     params:delta("break_beatsoffset"..self.id,d)
   elseif self.op==5 then
@@ -317,9 +320,6 @@ function Sample:swap()
   for _,op in ipairs(self.break_options) do
     cmd=cmd.." --"..op[1].." "..params:get("break_"..op[1]..self.id)
   end
-  if params:get("break_tapedeck"..self.id)==2 then
-    cmd=cmd.." -tapedeck"
-  end
   cmd=cmd.." --retempo"..self.retempo_options[params:get("break_retempo"..self.id)].." "
   cmd=cmd.." &"
   print(cmd)
@@ -392,14 +392,13 @@ function Sample:redraw(smp,progress_val)
     screen.level(5)
     screen.text(self.beat_num.."qn")
     screen.move(40,y)
-    screen.level(self.op==2 and 15 or 5)
     screen.text_right(params:get("break_inputtempo"..self.id))
 
     screen.move(0,y+lh)
-    screen.level(self.op==3 and 15 or 5)
+    screen.level(self.op==2 and 15 or 5)
     screen.text(params:get("break_beats"..self.id).."qn")
     screen.move(40,y+lh)
-    screen.level(5)
+    screen.level(self.op==3 and 15 or 5)
     screen.text_right(math.floor(clock.get_tempo()))
 
     screen.move(0,y+lh*2)

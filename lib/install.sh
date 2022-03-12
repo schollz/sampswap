@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # install sox
+echo "installing" > /tmp/sampswap_installing
+
 if ! command -v sox &> /dev/null
 then
 	echo "installing sox"
@@ -10,21 +12,6 @@ if ! command -v sox &> /dev/null
 then
 	echo "installing sox from static compiled version"
 	cd /tmp && wget https://github.com/schollz/makebreakbeat/releases/download/v0.1.0/sox && chmod +x sox && sudo mv sox /usr/local/bin/
-fi
-
-# install portedplugins if not already
-FILEO=/usr/share/SuperCollider/Extensions/PortedPlugins/AnalogTape_scsynth.so
-FILE=/home/we/.local/share/SuperCollider/Extensions/PortedPlugins/AnalogTape_scsynth.so
-if [ -f "$FILEO" ]; then 
-	echo "have ported plugins" > /dev/null
-else
-	if [ -f "$FILE" ]; then 
-		echo "have ported plugins" > /dev/null
-	else
-		echo "installing PortedPlugins..."
-		mkdir -p /home/we/.local/share/SuperCollider/Extensions/
-		cd /tmp && wget https://github.com/schollz/tapedeck/releases/download/PortedPlugins/PortedPlugins.tar.gz && tar -xvzf PortedPlugins.tar.gz && rm PortedPlugins.tar.gz && sudo rsync -avrP PortedPlugins /home/we/.local/share/SuperCollider/Extensions/
-	fi
 fi
 
 # download sendosc if not already
@@ -48,5 +35,7 @@ else
 fi
 
 ## cleanup
+rm -rf /tmp/temp_oscscore*
 rm -rf /tmp/sampswap
 mkdir -p /tmp/sampswap
+rm /tmp/sampswap_installing

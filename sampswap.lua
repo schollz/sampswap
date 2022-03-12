@@ -21,9 +21,11 @@ SENDOSC="/home/we/dust/data/sampswap/sendosc"
 WORKDIR="/tmp/sampswap/"
 NRTREADY="/tmp/nrt-scready"
 PROGRESSFILE="/tmp/sampswap/progress"
+INSTALLINGFILE="/tmp/sampswap_installing"
 
 shift=false
 global_progress_file_exists=false
+global_installing_file_exists=true
 
 function init()
   loading=true
@@ -37,6 +39,9 @@ function init()
   lattice_beats=-1
   pattern=lattice:new_pattern{
     action=function(t)
+      if global_installing_file_exists then 
+        do return end 
+      end
       loading=not util.file_exists(NRTREADY)
       if sample==nil then
         sample={}
@@ -59,7 +64,6 @@ function init()
         end
       end
       if #tozero==1 then
-        print("tozero1",tozero[1])
         engine.tozero1(tozero[1])
       elseif #tozero==2 then
         engine.tozero2(tozero[1],tozero[2])
@@ -93,8 +97,12 @@ function init()
   clock_redraw=clock.run(function()
     while true do
       clock.sleep(1/10)
-      if sample~=nil then
-        sample[samplei]:update()
+      if global_installing_file_exists then 
+        global_installing_file_exists=util.file_exists(INSTALLINGFILE)
+      else
+        if sample~=nil then
+          sample[samplei]:update()
+        end  
       end
       redraw()
     end
@@ -143,8 +151,13 @@ end
 function redraw()
   screen.clear()
   screen.aa(0)
-  if sample~=nil then
-    sample[samplei]:redraw(sample,progress_current)
+  if global_installing_file_exists then 
+    screen.move(64,32)
+    screen.text_center("installing sampswap...")
+  else
+    if sample~=nil then
+      sample[samplei]:redraw(sample,progress_current)
+    end
   end
   screen.update()
 end

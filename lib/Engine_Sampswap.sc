@@ -65,24 +65,6 @@ Engine_Sampswap : CroneEngine {
             snd = snd * EnvGen.ar(Env.new([0, 1, 1, 0], [0.1,dur-0.2,0.1]), doneAction:2);
             Out.ar(out, snd);
         }).load(nrtServer);
-        SynthDef("tapedeck", {
-            arg out=0,  dur=30,
-            amp=0.5,tape_wet=0.9,tape_bias=0.9,saturation=0.9,drive=0.8,
-            tape_oversample=1,mode=0,
-            dist_wet=0.07,drivegain=0.5,dist_bias=0.5,lowgain=0.1,highgain=0.1,
-            shelvingfreq=600,dist_oversample=1,
-            hpf=60,hpfqr=0.6,
-            lpf=18000,lpfqr=0.6;
-            var duration=BufDur.ir(0);
-            var snd = PlayBuf.ar(2,0,BufRateScale.kr(0));
-            snd=snd*amp;
-            snd=SelectX.ar(Lag.kr(tape_wet,1),[snd,AnalogTape.ar(snd,tape_bias,saturation,drive,tape_oversample,mode)]);	
-            snd=SelectX.ar(Lag.kr(dist_wet/10,1),[snd,AnalogVintageDistortion.ar(snd,drivegain,dist_bias,lowgain,highgain,shelvingfreq,dist_oversample)]);				
-            snd=RHPF.ar(snd,hpf,hpfqr);
-            snd=RLPF.ar(snd,lpf,lpfqr);
-            snd = snd * EnvGen.ar(Env.new([0, 1, 1, 0], [0.005,dur-0.01,0.005]), doneAction:2);
-            Out.ar(out, snd);
-        }).load(nrtServer);
         SynthDef("filter_in_out", {
             arg out=0,  dur=30;
             var duration=BufDur.ir(0);
