@@ -30,4 +30,4 @@ install with
 ;install https://github.com/schollz/sampswap
 ```
 
-once you start the script for the first time it will install `aubio`, `sox`, and `PortedPlugins`, and `sendosc` (~8 MB total).
+once you start the script for the first time it will install `aubio`, `sox`, and `sendosc` (~8 MB total).
