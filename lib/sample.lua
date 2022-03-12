@@ -54,28 +54,22 @@ function Sample:new (o)
     {"revreverb",5,10,0},
   }
   local i=o.id
-  params:add_group("loop "..i,9+#o.break_options)
+  params:add_group("loop "..i,8+#o.break_options)
   params:add{type='binary',name="make beat",id='break_make'..i,behavior='trigger',action=function(v) sampleswap(i) end}
   params:add_file("break_originalfile"..i,"original file",_path.audio.."sampswap/amen_resampled.wav")
+  params:add{type="number",id="break_originalbeats"..i,name="original beats",min=0,max=300,default=4}
+  params:add{type="number",id="break_originalbpm"..i,name="original bpm",min=0,max=300,default=4}
   params:hide("break_originalfile"..i)
+  params:hide("break_originalbeats"..i)
+  params:hide("break_originalbpm"..i)
+
   params:set_action("break_originalfile"..i,function(x)
     print(i,"got new original file: ",x)
   end)
-  --params:hide("break_originalfile"..i)
   params:add_file("break_file"..i,"load sample",_path.audio.."sampswap/amen_resampled.wav")
   params:set_action("break_file"..i,function(x)
     print(i,"got new file: ",x)
-    if not string.find(x,"_sampswap_") then
-      print("setting original file to "..x)
-      params:set("break_originalfile"..i,x)
-    end
     o:update_audio_file()
-  end)
-  params:add{type="number",id="break_inputtempo"..i,name="file tempo",min=30,max=250,default=120}
-  params:set_action("break_inputtempo"..i,function(x)
-    if o.file_seconds~=nil then
-      o.beat_num=util.round(o.file_seconds/(60/x))
-    end
   end)
   params:add{type="number",id="break_beats"..i,name="beats",min=16,max=128,default=32}
   params:add{type="number",id="break_beatsoffset"..i,name="offset",min=0,max=16,default=0}
@@ -97,7 +91,7 @@ function Sample:new (o)
 end
 
 function Sample:update_beat(beats)
-  if self.beat_num==0 or self.filename==nil or beats==nil then
+  if self.filename==nil or beats==nil then
     do return end
   end
   if self.align_track then
@@ -164,43 +158,41 @@ function Sample:update_audio_file()
     self.folderend=token
   end
   local fname=params:get("break_file"..self.id)
-  local fname_trimmed=silence_trim(fname)
-  local s=""
-  if util.file_exists(fname_trimmed) then
-    s=util.os_capture("sox "..fname_trimmed.." -n stat 2>&1  | grep Length | awk '{print $3}'")
-    os.execute("rm -f "..fname_trimmed)
-  else
-    s=util.os_capture("sox "..fname.." -n stat 2>&1  | grep Length | awk '{print $3}'")
-  end
-  self.file_seconds=tonumber(s)
-  local closet_bpm={0,100000}
-  for bpm=100,200 do
-    local measures=self.file_seconds/((60/bpm)*4)
-    local measured_rounded=util.round(measures)
-    local dif=math.abs(measured_rounded-measures)
-    dif=dif-(measured_rounded%4==0 and measured_rounded/60 or 0)
-    --print(bpm,measured_rounded,measures,dif)
-    if dif<closet_bpm[2] then
-      closet_bpm[2]=dif
-      closet_bpm[1]=bpm
-    end
-  end
+
   if not string.find(fname,"_sampswap_") then
-    params:set("break_inputtempo"..self.id,closet_bpm[1])
+    local fname_trimmed=silence_trim(fname)
+    local s=""
+    if util.file_exists(fname_trimmed) then
+      s=util.os_capture("sox "..fname_trimmed.." -n stat 2>&1  | grep Length | awk '{print $3}'")
+      os.execute("rm -f "..fname_trimmed)
+    else
+      s=util.os_capture("sox "..fname.." -n stat 2>&1  | grep Length | awk '{print $3}'")
+    end
+    local file_seconds=tonumber(s)
+    local closet_bpm={0,100000}
+    for bpm=100,200 do
+      local measures=file_seconds/((60/bpm)*4)
+      local measured_rounded=util.round(measures)
+      local dif=math.abs(measured_rounded-measures)
+      dif=dif-(measured_rounded%4==0 and measured_rounded/60 or 0)
+      --print(bpm,measured_rounded,measures,dif)
+      if dif<closet_bpm[2] then
+        closet_bpm[2]=dif
+        closet_bpm[1]=bpm
+      end
+    end
     local bpm=nil
     for word in string.gmatch(fname,'([^_]+)') do
       if string.find(word,"bpm") then
         bpm=word:match("%d+")
       end
     end
-    if bpm~=nil then
-      if bpm~=nil then
-        params:set("break_inputtempo"..self.id,tonumber(bpm))
-      end
-    else
+    if bpm==nil then
       bpm=closet_bpm[1]
     end
-    self.beat_num=util.round(self.file_seconds/(60/bpm))
+    params:set("break_originalfile"..self,fname)
+    params:set("break_originalbpm"..self.id,bpm)
+    params:set("break_originalbeats"..self.id,util.round(file_seconds/(60/bpm)))
   end
 
   self:determine_index_max()
@@ -312,10 +304,7 @@ function Sample:swap()
   self.debounce_making_file=10
   local filename=params:get("break_originalfile"..self.id)
   local cmd="cd ".._path.code.."sampswap/lib/ && lua sampswap.lua --server-started"
-  if filename==params:get("break_file"..self.id) then
-    -- use input tempo only if building from new file
-    cmd=cmd.." -input-tempo "..params:get("break_inputtempo"..self.id)
-  end
+  -- TODO: option to change input tempo??
   cmd=cmd.." -filter-in "..params:get("break_filter_in")
   cmd=cmd.." -filter-out "..params:get("break_filter_out")
   cmd=cmd.." -t "..tempo.." -b "..params:get("break_beats"..self.id)
@@ -393,9 +382,9 @@ function Sample:redraw(smp,progress_val)
     local lh=9.5
     screen.move(0,y)
     screen.level(5)
-    screen.text(self.beat_num.."qn")
+    screen.text(params:get("break_originalbeats"..self.id).."qn")
     screen.move(40,y)
-    screen.text_right(params:get("break_inputtempo"..self.id))
+    screen.text_right(params:get("break_originalbpm"..self.id))
 
     screen.move(0,y+lh)
     screen.level(self.op==2 and 15 or 5)
