@@ -159,6 +159,7 @@ function Sample:update_audio_file()
   end
   local fname=params:get("break_file"..self.id)
 
+  self.index_cur=0
   if not string.find(fname,"_sampswap_") then
     local fname_trimmed=silence_trim(fname)
     local s=""
@@ -190,10 +191,19 @@ function Sample:update_audio_file()
     if bpm==nil then
       bpm=closet_bpm[1]
     end
-    params:set("break_originalfile"..self,fname)
+    params:set("break_originalfile"..self.id,fname)
     params:set("break_originalbpm"..self.id,bpm)
     params:set("break_originalbeats"..self.id,util.round(file_seconds/(60/bpm)))
+  else
+    -- determine current index
+    for word in string.gmatch(self.filename,'([^_]+)') do
+      local num=string.match(word,"%d+")
+      if num~=nil then
+        self.index_cur=tonumber(num)
+      end
+    end
   end
+  _,self.filename_original,_=string.match(params:get("break_originalfile"..self.id),"(.-)([^\\/]-%.?([^%.\\/]*))$")
 
   self:determine_index_max()
   self.loaded=false
@@ -246,12 +256,10 @@ function Sample:option_set_delta_index(d)
       index_cur=tonumber(num)
     end
   end
-  print(index_cur)
   if index_cur==0 then
     do return end
   end
   local index_next=index_cur+d
-  print(index_next)
   if index_next>self.index_max or index_next<1 then
     do return end
   end
@@ -339,10 +347,10 @@ function Sample:redraw(smp,progress_val)
   screen.blend_mode(1)
   screen.level(15)
   screen.move(64,7)
-  local filename=self.filename
+  local filename=self.filename_original
   filename=filename:gsub("_sampswap","")
   filename=filename:gsub(".wav","")
-  screen.text_center(filename)
+  screen.text_center(filename.." ("..(self.index_cur==0 and "" or self.index_cur)..")")
   screen.update()
   screen.blend_mode(0)
   local sw=14
