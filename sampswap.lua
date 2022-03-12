@@ -12,6 +12,7 @@
 -- E changes sample
 local lattice_=require("lattice")
 local sample_=include("sampswap/lib/sample")
+local crowseq=include("sampswap/lib/crowseq")
 local UI=require("ui")
 
 engine.name="Sampswap"
@@ -28,6 +29,10 @@ function init()
   loading=true
   samplei=1
   sample=nil
+
+  if norns.crow.connected() then
+    cs=crowseq:init()
+  end
 
   current_tempo=clock.get_tempo()
   lattice=lattice_:new()
