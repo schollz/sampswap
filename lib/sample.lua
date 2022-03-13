@@ -17,16 +17,15 @@ function Sample:new (o)
   o.selected=o.id==1
   o.ss_options={
     {"amp",25,100,0},
-    {"jump",20,50,0},
     {"reverse",5,15,0},
     {"stutter",10,30,0},
-    {"pitch",1,10,0},
     {"reverb",1,10,0},
     {"revreverb",5,10,0},
+    {"jump",20,50,0},
+    {"pitch",1,10,0},
   }
   local i=o.id
   params:add_group("loop "..i,14+#o.ss_options)
-  -- TODO: hook this up
   params:add{type='binary',name="make beat",id='ss_make'..i,behavior='trigger',action=function(v) self:swap() end}
   params:add_file("ss_file_load"..i,"load file",_path.audio)
   params:set_action("ss_file_load"..i,function(x)
@@ -47,7 +46,7 @@ function Sample:new (o)
   params:add{type="number",id="ss_index"..i,name="index",min=0,max=300000,default=0}
   params:set_action("ss_index"..i,function(x)
     print("ss_index",x)
-    if x>0 then 
+    if x>0 then
       o.debounce_index_load=4
     end
   end)
@@ -74,7 +73,7 @@ function Sample:new (o)
 end
 
 function Sample:default()
-  if params:get("ss_file_original"..self.id)==_path.audio then 
+  if params:get("ss_file_original"..self.id)==_path.audio then
     params:set("ss_file_load"..self.id,_path.audio.."sampswap/amen_resampled.wav")
   end
 end
@@ -86,7 +85,7 @@ function Sample:engine_load_track(path_to_file)
 end
 
 function Sample:save_file_index(path_to_file,tempo,i)
-  if not util.file_exists(path_to_file) then 
+  if not util.file_exists(path_to_file) then
     print(string.format("save_file_index: could not find %s",path_to_file))
   end
   local filename,folder=self:path_from_index(tempo,i)
@@ -177,8 +176,8 @@ function Sample:load_file_original(path_to_original_file)
 end
 
 function Sample:update_beat(beats)
-  if not self.loaded then 
-    do return end 
+  if not self.loaded then
+    do return end
   end
   if self.align_track then
     self.align_track=nil
@@ -289,7 +288,7 @@ function Sample:swap()
   cmd=cmd.." -filter-out "..params:get("ss_filter_out"..self.id)
   cmd=cmd.." -target-tempo "..tempo.." -target-beats "..params:get("ss_target_beats"..self.id)
   cmd=cmd.." -input-tempo "..params:get("ss_input_tempo"..self.id)
-  cmd=cmd.." -output ".. self.making_filename.." ".." -input-file "..params:get("ss_file_original"..self.id)
+  cmd=cmd.." -output "..self.making_filename.." ".." -input-file "..params:get("ss_file_original"..self.id)
   for _,op in ipairs(self.ss_options) do
     cmd=cmd.." --"..op[1].." "..params:get("ss_"..op[1]..self.id)
   end
@@ -318,7 +317,7 @@ function Sample:redraw(smp,progress_val)
   screen.level(15)
   screen.move(64,7)
   local index_string=""
-  if params:get("ss_index"..self.id)>0 then 
+  if params:get("ss_index"..self.id)>0 then
     index_string=" ("..params:get("ss_index"..self.id)..")"
   end
   screen.text_center(params:get("ss_file_original_noext"..self.id)..index_string)
