@@ -47,7 +47,9 @@ function Sample:new (o)
   params:add{type="number",id="ss_index"..i,name="index",min=0,max=300000,default=0}
   params:set_action("ss_index"..i,function(x)
     print("ss_index",x)
-    o.debounce_index_load=4
+    if x>0 then 
+      o.debounce_index_load=4
+    end
   end)
   params:hide("ss_index"..i)
 
@@ -170,6 +172,8 @@ function Sample:load_file_original(path_to_original_file)
 
   -- reload the current max index
   self.index_max=self:get_index_max()
+
+  params:set("ss_index"..self.id,0)
 end
 
 function Sample:update_beat(beats)

@@ -697,7 +697,7 @@ function run()
         local start_beat=math.random(2,total_beats-2)*2
         local length_beat=math.random(1,3)
         local paste_beat=math.random(2,math.floor(total_beats-total_beats/2-4))*2
-        local crossfade=0.05
+        local crossfade=0.1
         local piece=audio.reverse(audio.trim(fname_original,60/bpm/2*start_beat-crossfade,60/bpm/2*length_beat+crossfade*2))
         fname=audio.paste(fname,piece,60/bpm/2*paste_beat,crossfade)
       end
