@@ -25,7 +25,7 @@ function audio.silence_trim(fname)
 end
 
 function audio.seconds(fname)
-  local fname_trimmed=silence_trim(fname)
+  local fname_trimmed=audio.silence_trim(fname)
   local s=""
   if util.file_exists(fname_trimmed) then
     s=util.os_capture("sox "..fname_trimmed.." -n stat 2>&1  | grep Length | awk '{print $3}'")
@@ -38,6 +38,7 @@ function audio.seconds(fname)
 end
 
 function audio.determine_tempo(path_to_file)
+  print("audio.determine_tempo",path_to_file)
   local file_seconds=audio.seconds(path_to_file)
   local closet_bpm={0,100000}
   for bpm=100,200 do
@@ -52,7 +53,7 @@ function audio.determine_tempo(path_to_file)
     end
   end
   local bpm=nil
-  for word in string.gmatch(fname,'([^_]+)') do
+  for word in string.gmatch(path_to_file,'([^_]+)') do
     if string.find(word,"bpm") then
       bpm=word:match("%d+")
     end
@@ -60,20 +61,24 @@ function audio.determine_tempo(path_to_file)
   if bpm==nil then
     bpm=closet_bpm[1]
   end
-  local beats=util.round(file_seconds/(60/bpm))
+  bpm=math.floor(bpm)
+  local beats=math.floor(util.round(file_seconds/(60/bpm)))
   return bpm,beats,file_seconds
 end
 
 function json_dump(filename,t)
-  ts=json.encode(t)
   file=io.open(filename,"w+")
   io.output(file)
-  io.write(data)
+  io.write(json.encode(t))
   io.close(file)
 end
 
 function json_load(filename)
   local f=io.open(filename,"rb")
+  if f==nil then 
+    print("json_load: could not open "..filename) 
+    do return end 
+  end
   local content=f:read("*all")
   f:close()
 

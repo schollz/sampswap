@@ -629,19 +629,21 @@ function run()
       fname=audio.sample_rate(fname,48000,2)
       fname=audio.silence_trim(fname)
       local bpm=nil
-      for word in string.gmatch(original_fname, '([^_]+)') do
-        print(word)
-        if string.find(word,"bpm") then 
-          bpm=word:match("bpm%d+")
+      if input_tempo==nil then 
+        for word in string.gmatch(original_fname, '([^_]+)') do
+          print(word)
+          if string.find(word,"bpm") then 
+            bpm=word:match("bpm%d+")
+          end
         end
-      end
-      print("matched bpm",bpm)
-      if bpm~=nil then
-        bpm=bpm:match("%d+")
-      end
-      if bpm==nil then 
-        -- bpm=input_tempo or audio.tempo(fname)
-        bpm=audio.tempo(fname)
+        if bpm~=nil then
+          bpm=bpm:match("%d+")
+        end
+        if bpm==nil then 
+          bpm=audio.tempo(fname)
+        end
+      else
+        bpm=input_tempo 
       end
       print("bpm: "..bpm)
 

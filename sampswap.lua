@@ -17,7 +17,7 @@ if not string.find(package.cpath,"/home/we/dust/code/sampswap/lib/") then
 end
 json=require("cjson")
 local lattice_=require("lattice")
-local sample_=include("sampswap/lib/sample")
+sample_=include("sampswap/lib/sample")
 -- local crowseq=include("sampswap/lib/crowseq")
 
 engine.name="Sampswap"
@@ -52,6 +52,9 @@ function init()
           sample[i]=sample_:new{id=i}
         end
         params:default()
+        for i=1,3 do
+          sample[i]:default()
+        end
       end
       if clock.get_tempo()~=current_tempo then
         current_tempo=clock.get_tempo()
@@ -61,9 +64,11 @@ function init()
       end
       lattice_beats=lattice_beats+1
       local tozero={}
-      for i,smpl in ipairs(sample) do
-        if smpl:update_beat(lattice_beats) then
-          table.insert(tozero,i)
+      if sample~=nil then 
+        for i,smpl in ipairs(sample) do
+          if smpl:update_beat(lattice_beats) then
+            table.insert(tozero,i)
+          end
         end
       end
       if #tozero==1 then
@@ -103,7 +108,7 @@ function init()
       if global_installing_file_exists then
         global_installing_file_exists=util.file_exists(INSTALLINGFILE)
       else
-        if sample~=nil then
+        if sample~=nil and sample[samplei]~=nil then
           sample[samplei]:update()
         end
       end
@@ -158,7 +163,7 @@ function redraw()
     screen.move(64,32)
     screen.text_center("installing sampswap...")
   else
-    if sample~=nil then
+    if sample~=nil and sample[samplei]~=nil then
       sample[samplei]:redraw(sample,progress_current)
     end
   end

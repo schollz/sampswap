@@ -25,9 +25,9 @@ function Sample:new (o)
     {"revreverb",5,10,0},
   }
   local i=o.id
-  params:add_group("loop "..i,13+#o.ss_options)
+  params:add_group("loop "..i,14+#o.ss_options)
   -- TODO: hook this up
-  params:add{type='binary',name="make beat",id='ss_make'..i,behavior='trigger',action=function(v) sampleswap(i) end}
+  params:add{type='binary',name="make beat",id='ss_make'..i,behavior='trigger',action=function(v) self:swap() end}
   params:add_file("ss_file_load"..i,"load file",_path.audio)
   params:set_action("ss_file_load"..i,function(x)
     o:load_file_original(x)
@@ -37,7 +37,7 @@ function Sample:new (o)
   params:add_text("ss_file_original_noext"..i,"no ext","")
   params:add{type="number",id="ss_file_original_beats"..i,name="original beats",min=0,max=300,default=4}
   params:add{type="number",id="ss_file_original_bpm"..i,name="original bpm",min=0,max=300,default=4}
-  params:add_control("ss_file_original_sec","sec",controlspec.new(0,640000,'lin',0.001,0,'sec'))
+  params:add_control("ss_file_original_sec"..i,"sec",controlspec.new(0,640000,'lin',0.001,0,'sec'))
   params:hide("ss_file_original"..i)
   params:hide("ss_file_original_noext"..i)
   params:hide("ss_file_original_beats"..i)
@@ -46,6 +46,7 @@ function Sample:new (o)
 
   params:add{type="number",id="ss_index"..i,name="index",min=0,max=300000,default=0}
   params:set_action("ss_index"..i,function(x)
+    print("ss_index",x)
     o.debounce_index_load=4
   end)
   params:hide("ss_index"..i)
@@ -66,51 +67,59 @@ function Sample:new (o)
   o.retempo_options={"repitch","stretch","none"}
   params:add_option("ss_retempo"..i,"tempo changing",o.retempo_options)
 
-  o:determine_index_max()
+  self.index_max=o:get_index_max()
   return o
 end
 
+function Sample:default()
+  if params:get("ss_file_original"..self.id)==_path.audio then 
+    params:set("ss_file_load"..self.id,_path.audio.."sampswap/amen_resampled.wav")
+  end
+end
+
 function Sample:engine_load_track(path_to_file)
+  print("engine_load_track",path_to_file)
   engine.load_track(self.id,path_to_file,self.playing and params:get("ss_amp"..self.id)/100 or 0)
 end
 
 function Sample:save_file_index(path_to_file,tempo,i)
-  local path_sampswap=_path.audio.."sampswap/"..params:get("original_filename_noext").."/"
-  local path_to_index_folder=path_sampswap..tempo.."/"
-  os.execute("mkdir -p "..path_to_index_folder)
+  local filename,folder=self:path_from_index(tempo,i)
+  os.execute("mkdir -p "..folder)
 
   -- save the number of seconds
   local data={seconds=audio.seconds(path_to_file)}
   data.beats=data.seconds/(60/tempo)
-  json_dump(path_to_index_folder..i..".json",data)
+  json_dump(folder..i..".json",data)
 
   -- move the file
-  os.execute(string.format("mv %s %s",path_to_file,path_to_index_folder..i..".wav"))
+  os.execute(string.format("mv %s %s",path_to_file,filename))
+
+  print(string.format("saved '%s' to '%s'",path_to_file,filename))
 end
 
 function Sample:load_file_index(tempo,i)
-  local path_sampswap=_path.audio.."sampswap/"..params:get("original_filename_noext").."/"
-  local path_to_index_folder=path_sampswap..tempo.."/"
+  print("load_file_index",tempo,i)
+  local filename,folder=self:path_from_index(tempo,i)
 
   -- check if it exists
-  if not util.file_exists(path_to_index_folder..i..".wav") then
+  if not util.file_exists(filename) then
     do return end
   end
 
   -- load data
-  local data=json_load(path_to_index_folder..i..".json")
+  local data=json_load(folder..i..".json")
   if data==nil then
     do return end
   end
 
   -- reset parameters
-  params:set("ss_target_beats",data.beats)
+  params:set("ss_target_beats"..self.id,math.floor(util.round(data.beats)))
 
   -- load it into the engine
-  self:engine_load_track(path_to_index_folder..i..".wav")
+  self:engine_load_track(filename)
 
   -- reload the current max index
-  self:determine_index_max()
+  self.index_max=self:get_index_max()
 end
 
 function Sample:load_file_original(path_to_original_file)
@@ -124,7 +133,7 @@ function Sample:load_file_original(path_to_original_file)
   -- split into pieces
   local original_folder,original_filename,original_ext=string.match(path_to_original_file,"(.-)([^\\/]-%.?([^%.\\/]*))$")
   data.noext=original_filename
-  for match in (original_filename..original_ext):gmatch("(.-)"..original_ext) do
+  for match in (original_filename.."."..original_ext):gmatch("(.-)".."."..original_ext) do
     data.noext=match
     break
   end
@@ -141,22 +150,22 @@ function Sample:load_file_original(path_to_original_file)
   json_dump(path_sampswap.."original.json",data)
 
   -- update parameters
-  params:set("ss_file_original",data.path)
-  params:set("ss_file_original_noext",data.noext)
-  params:set("ss_file_original_bpm",data.tempo)
-  params:set("ss_file_original_beats",data.beats)
-  params:set("ss_file_original_sec",data.seconds)
-  params:set("ss_input_tempo",data.tempo)
+  params:set("ss_file_original"..self.id,data.path)
+  params:set("ss_file_original_noext"..self.id,data.noext)
+  params:set("ss_file_original_bpm"..self.id,data.tempo)
+  params:set("ss_file_original_beats"..self.id,data.beats)
+  params:set("ss_file_original_sec"..self.id,data.seconds)
+  params:set("ss_input_tempo"..self.id,data.tempo)
 
   -- reset the load file to the folder containing the file
   -- so it can't be triggered
-  params:set("ss_file_load",original_folder)
+  params:set("ss_file_load"..self.id,original_folder)
 
   -- load it into the engine (with volume if playing)
   self:engine_load_track(path_to_original_file)
 
   -- reload the current max index
-  self:determine_index_max()
+  self.index_max=self:get_index_max()
 end
 
 function Sample:update_beat(beats)
@@ -178,17 +187,20 @@ function Sample:update()
     if self.debounce_making_index~=nil and self.debounce_making_index>0 then
       self.debounce_making_index=self.debounce_making_index-1
       if self.debounce_making_index==0 then
-        self.index_max=self.making_index
-        self.making_index=nil
+        self:save_file_index(self.making_filename,math.floor(clock.get_tempo()),self.making_index)
         params:set("ss_index"..self.id,self.making_index)
+        os.execute("rm -f "..self.making_filename)
+        self.making_index=nil
+        self.making_filename=nil
+        self.debounce_index_load=2
       end
     end
   end
-  if self.debounce_index_load~=nil and self.debounce_index_load>0 then
+  if global_progress_file_exists==false and self.making_index==nil and self.debounce_index_load~=nil and self.debounce_index_load>0 then
     self.debounce_index_load=self.debounce_index_load-1
     if self.debounce_index_load==0 then
       self.debounce_index_load=nil
-      self:load_file_index(clock.get_tempo(),params:get("ss_index"))
+      self:load_file_index(math.floor(clock.get_tempo()),params:get("ss_index"..self.id))
     end
   end
 end
@@ -211,10 +223,9 @@ end
 
 function Sample:option_set_delta(d)
   if self.op==1 then
-    -- TODO: switch loop based on the produced loops
     self:option_set_delta_index(d)
   elseif self.op==2 then
-    params:delta("ss_beats"..self.id,d)
+    params:delta("ss_target_beats"..self.id,d)
   elseif self.op==3 then
     params:delta("clock_tempo",d)
   elseif self.op==4 then
@@ -232,43 +243,45 @@ function Sample:option_set_delta_index(d)
   local index_cur=params:get("ss_index"..self.id)
   local index_new=util.clamp(index_cur+d,0,self.index_max)
   if index_new~=index_cur then
-    params:set("ss_index",index_new)
+    params:set("ss_index"..self.id,index_new)
   end
 end
 
-function Sample:path_from_index(i)
-  local path_sampswap=_path.audio.."sampswap/"..params:get("original_filename_noext").."/"
-  return path_sampswap..clock.get_tempo().."/"..i..".wav"
+function Sample:path_from_index(tempo,i)
+  local folder=_path.audio.."sampswap/"..params:get("ss_file_original_noext"..self.id).."/"..tempo.."/"
+  local fullfile=folder..params:get("ss_file_original_noext"..self.id).."_bpm"..tempo.."_"..i..".wav"
+  return fullfile,folder
 end
 
-function Sample:determine_index_max()
-  self.index_max=0
+function Sample:get_index_max()
+  local tempo=math.floor(clock.get_tempo())
+  local index_max=0
   for i=1,1000 do
-    if not util.file_exists(self:path_from_index(i)) then
+    local fname,_=self:path_from_index(tempo,i)
+    if not util.file_exists(fname) then
       break
     end
-    self.index_max=i
+    index_max=i
   end
+  return index_max
 end
 
 function Sample:swap()
-  if global_progress_file_exists or self.filename==nil or self.making_index~=nil then
+  if global_progress_file_exists or self.making_index~=nil then
     do return end
   end
   params:write()
   local tempo=math.floor(clock.get_tempo())
-  self.making_index=self:path_from_index(self.index_max+1)
-  if self.making_index==nil then
-    do return end
-  end
   self.debounce_making_index=10
-  local filename=params:get("ss_originalfile"..self.id)
+  self.index_max=self:get_index_max()
+  self.making_index=self.index_max+1
+  self.making_filename=string.random_filename(".wav","/tmp/making-")
   local cmd="cd ".._path.code.."sampswap/lib/ && lua sampswap.lua --server-started"
-  -- TODO: option to change input tempo??
-  cmd=cmd.." -filter-in "..params:get("ss_filter_in")
-  cmd=cmd.." -filter-out "..params:get("ss_filter_out")
-  cmd=cmd.." -t "..tempo.." -b "..params:get("ss_beats"..self.id)
-  cmd=cmd.." -o "..self.making_index.." ".." -i "..filename
+  cmd=cmd.." -filter-in "..params:get("ss_filter_in"..self.id)
+  cmd=cmd.." -filter-out "..params:get("ss_filter_out"..self.id)
+  cmd=cmd.." -t "..tempo.." -b "..params:get("ss_target_beats"..self.id)
+  cmd=cmd.." -input-tempo "..params:get("ss_input_tempo"..self.id)
+  cmd=cmd.." -o ".. self.making_filename.." ".." -i "..params:get("ss_file_original"..self.id)
   for _,op in ipairs(self.ss_options) do
     cmd=cmd.." --"..op[1].." "..params:get("ss_"..op[1]..self.id)
   end
@@ -284,9 +297,6 @@ function Sample:swap()
 end
 
 function Sample:redraw(smp,progress_val)
-  if self.filename==nil then
-    do return end
-  end
   progress_val=progress_val or 100
   local slider=UI.Slider.new(0,0,128,9,0,0,100,{},"right")
   slider.label="progress"
@@ -299,10 +309,11 @@ function Sample:redraw(smp,progress_val)
   screen.blend_mode(1)
   screen.level(15)
   screen.move(64,7)
-  local filename=self.filename_original
-  filename=filename:gsub("_sampswap","")
-  filename=filename:gsub(".wav","")
-  screen.text_center(filename.." ("..(self.index_cur==0 and "" or self.index_cur)..")")
+  local index_string=""
+  if params:get("ss_index"..self.id)>0 then 
+    index_string=" ("..params:get("ss_index"..self.id)..")"
+  end
+  screen.text_center(params:get("ss_file_original_noext"..self.id)..index_string)
   screen.update()
   screen.blend_mode(0)
   local sw=14
@@ -342,13 +353,13 @@ function Sample:redraw(smp,progress_val)
     local lh=9.5
     screen.move(0,y)
     screen.level(5)
-    screen.text(params:get("ss_originalbeats"..self.id).."qn")
+    screen.text(params:get("ss_file_original_beats"..self.id).."qn")
     screen.move(40,y)
-    screen.text_right(params:get("ss_originalbpm"..self.id))
+    screen.text_right(params:get("ss_input_tempo"..self.id))
 
     screen.move(0,y+lh)
     screen.level(self.op==2 and 15 or 5)
-    screen.text(params:get("ss_beats"..self.id).."qn")
+    screen.text(params:get("ss_target_beats"..self.id).."qn")
     screen.move(40,y+lh)
     screen.level(self.op==3 and 15 or 5)
     screen.text_right(math.floor(clock.get_tempo()))
