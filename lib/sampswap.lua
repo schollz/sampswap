@@ -794,8 +794,15 @@ function run()
       end
 
       fname=audio.supercollider_effect(fname,"filter_in_out",filter_in_beats*60/bpm,filter_out_beats*60/bpm)
-      if tapedeck then 
-        fname=audio.supercollider_effect(fname,"tapedeck")
+      for tries=1,30 do 
+        if os.file_exists(fname) then
+          break
+        end
+        os.execute("sleep 0.1")
+      end
+      if not os.file_exists(fname) then
+        print("!!!! ERROR !!!!")
+        do return end 
       end
       os.cmd("mv "..fname.." "..fname_out)
       if not server_started then 

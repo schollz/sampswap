@@ -7,6 +7,7 @@ Engine_Sampswap : CroneEngine {
     var sampleBuffSampswap;
     var playerSampswap;
     var params;
+    var oscScore;
     var mainServer;
     var nrtServer;
     var serverOptions;
@@ -103,7 +104,7 @@ Engine_Sampswap : CroneEngine {
                         action: {
                             Routine {
                                 postln("done rendering: " ++ outFile);
-                                0.25.wait;
+                                0.2.wait;
                                 NetAddr.new("localhost",oscCallbackPort).sendMsg("/quit");
                             }.play;
                         }
@@ -113,8 +114,6 @@ Engine_Sampswap : CroneEngine {
         };
         mainServer.waitForBoot({
             Routine {
-                var oscExit;
-                var oscScore;
                 "registring osc for score".postln;
                 oscScore = OSCFunc({ arg msg, time, addr, recvPort;
                     var inFile=msg[1].asString;
@@ -264,9 +263,10 @@ Engine_Sampswap : CroneEngine {
         playerSampswap.keysValuesDo({ arg key, value; ["freeing",key].postln; value.free; });
         sampleBuffSampswap.keysValuesDo({ arg key, value;  ["freeing",key].postln; value.free; });
         // ^ Sampswap specific
+        oscScore.free;
         mainServer.quit;
         nrtServer.quit;
-	mainServer.free;
-	nrtServer.free;
+        mainServer.free;
+        nrtServer.free;
     }
 }

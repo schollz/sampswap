@@ -330,13 +330,13 @@ function Sample:redraw(smp,progress_val)
   screen.text_center(params:get("ss_file_original_noext"..self.id)..index_string)
   screen.update()
   screen.blend_mode(0)
-  local sw=14
-  for i=1,3 do
+  local sw=10
+  for i=1,4 do
     local selected=self.id==i
     local x=128-sw
     local y=9+sw*(i-1)+i*2
-    local iconsw=7
-    local icon=UI.PlaybackIcon.new(x+sw/2-iconsw/2,y+sw/2-iconsw/2,6,6)
+    local iconsw=5
+    local icon=UI.PlaybackIcon.new(x+sw/2-iconsw/2,y+sw/2-iconsw/2,iconsw,iconsw)
     icon.status=smp[i].playing and 1 or 4
     icon.active=selected
     icon:redraw()

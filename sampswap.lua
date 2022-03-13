@@ -48,11 +48,11 @@ function init()
       loading=not util.file_exists(NRTREADY)
       if sample==nil then
         sample={}
-        for i=1,3 do
+        for i=1,4 do
           sample[i]=sample_:new{id=i}
         end
         params:default()
-        for i=1,3 do
+        for i=1,4 do
           sample[i]:default()
         end
       end
@@ -121,9 +121,9 @@ function enc(k,d)
     d=-1
   end
   if k==1 then
-    samplei=util.clamp(samplei+d,1,3)
+    samplei=util.clamp(samplei+d,1,4)
   elseif k==2 then
-    for i=1,3 do
+    for i=1,4 do
       sample[i]:option_sel_delta(samplei,d)
     end
   elseif k==3 then
