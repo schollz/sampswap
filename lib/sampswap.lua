@@ -528,7 +528,7 @@ function run()
       strip_silence=true
     elseif string.find(v,"make") and string.find(v,"movie") then
       make_movie=true
-    elseif string.find(v,"-i") and fname=="sample.aiff" then
+    elseif string.find(v,"input") and string.find(v,"file") then
       fname=arg[i+1]
       for j=2,100 do
         local a=arg[i+j]
@@ -543,7 +543,7 @@ function run()
         os.cmd("cp '"..fname.."' "..fname2)
         fname=fname2
       end
-    elseif string.find(v,"-o") then
+    elseif string.find(v,"-output") then
       fname_out=arg[i+1]
     elseif string.find(v,"reverse") then
       p_reverse=tonumber(arg[i+1]) or p_reverse
@@ -561,9 +561,9 @@ function run()
       p_reverb=tonumber(arg[i+1]) or p_reverb
     elseif string.find(v,"help") then
       print_help=true
-    elseif string.find(v,"-b") then
+    elseif string.find(v,"target") and string.find(v,"beats") then
       target_beats=tonumber(arg[i+1])
-    elseif string.find(v,"-t") then
+    elseif string.find(v,"target") and string.find(v,"tempo") then
       new_tempo=tonumber(arg[i+1]) or new_tempo
       if new_tempo then 
         new_tempo=math.floor(new_tempo)
@@ -677,7 +677,7 @@ function run()
         local length_beat=math.random(1,4)/8
         local paste_beat=start_beat
         local crossfade=0.005
-        local piece=audio.pitch(audio.trim(fname,60/bpm*start_beat-crossfade,60/bpm*length_beat+crossfade*2),2)
+        local piece=audio.pitch(audio.trim(fname_original,60/bpm*start_beat-crossfade,60/bpm*length_beat+crossfade*2),2)
         fname=audio.paste(fname,piece,60/bpm*paste_beat,crossfade)
       end
       -- basic copy and paste
@@ -698,7 +698,7 @@ function run()
         local length_beat=math.random(1,3)
         local paste_beat=math.random(2,math.floor(total_beats-total_beats/2-4))*2
         local crossfade=0.05
-        local piece=audio.reverse(audio.trim(fname,60/bpm/2*start_beat-crossfade,60/bpm/2*length_beat+crossfade*2))
+        local piece=audio.reverse(audio.trim(fname_original,60/bpm/2*start_beat-crossfade,60/bpm/2*length_beat+crossfade*2))
         fname=audio.paste(fname,piece,60/bpm/2*paste_beat,crossfade)
       end
       -- copy and reverberate and reverse and paste
@@ -733,7 +733,8 @@ function run()
         os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..PROGRESSFILE)
         local crossfade=0.005
         local beat_start=math.random(4,total_beats-4)
-        local piece=audio.stutter(fname_original,60/bpm/4,60/bpm*beat_start,12,crossfade,0.001,nil)
+        local stutters=math.random(1,3)*4
+        local piece=audio.stutter(fname_original,60/bpm/4,60/bpm*beat_start,stutters,crossfade,0.001,nil)
         piece=audio.supercollider_effect(piece,"lpf_rampup")
         fname=audio.paste(fname,piece,60/bpm/4*math.random(12,total_beats*4-16),crossfade)
       end

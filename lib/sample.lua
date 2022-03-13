@@ -80,9 +80,13 @@ end
 function Sample:engine_load_track(path_to_file)
   print("engine_load_track",path_to_file)
   engine.load_track(self.id,path_to_file,self.playing and params:get("ss_amp"..self.id)/100 or 0)
+  self.loaded=true
 end
 
 function Sample:save_file_index(path_to_file,tempo,i)
+  if not util.file_exists(path_to_file) then 
+    print(string.format("save_file_index: could not find %s",path_to_file))
+  end
   local filename,folder=self:path_from_index(tempo,i)
   os.execute("mkdir -p "..folder)
 
@@ -169,15 +173,15 @@ function Sample:load_file_original(path_to_original_file)
 end
 
 function Sample:update_beat(beats)
-  if self.filename==nil or beats==nil then
-    do return end
+  if not self.loaded then 
+    do return end 
   end
   if self.align_track then
     self.align_track=nil
     engine.tozero1(self.id)
   end
-  if (beats-params:get("ss_beatsoffset"..self.id))%params:get("ss_beats"..self.id)==0 then
-    --print(string.format("sample %d: resetting",self.id))
+  if (beats-params:get("ss_beatsoffset"..self.id))%params:get("ss_target_beats"..self.id)==0 then
+    print(string.format("sample %d: resetting",self.id))
     do return true end
   end
 end
@@ -279,9 +283,9 @@ function Sample:swap()
   local cmd="cd ".._path.code.."sampswap/lib/ && lua sampswap.lua --server-started"
   cmd=cmd.." -filter-in "..params:get("ss_filter_in"..self.id)
   cmd=cmd.." -filter-out "..params:get("ss_filter_out"..self.id)
-  cmd=cmd.." -t "..tempo.." -b "..params:get("ss_target_beats"..self.id)
+  cmd=cmd.." -target-tempo "..tempo.." -target-beats "..params:get("ss_target_beats"..self.id)
   cmd=cmd.." -input-tempo "..params:get("ss_input_tempo"..self.id)
-  cmd=cmd.." -o ".. self.making_filename.." ".." -i "..params:get("ss_file_original"..self.id)
+  cmd=cmd.." -output ".. self.making_filename.." ".." -input-file "..params:get("ss_file_original"..self.id)
   for _,op in ipairs(self.ss_options) do
     cmd=cmd.." --"..op[1].." "..params:get("ss_"..op[1]..self.id)
   end
