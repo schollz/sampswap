@@ -694,7 +694,7 @@ function run()
       for i=1,math.floor(total_beats*p_pitch/100) do 
         progress=progress+1
         os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..PROGRESSFILE)
-        local start_beat=math.random(8,total_beats-8)
+        local start_beat=math.random(1,total_beats-6)
         local length_beat=math.random(1,4)/8
         local paste_beat=start_beat
         local crossfade=0.005
