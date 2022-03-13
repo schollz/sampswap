@@ -14,7 +14,6 @@ function Sample:new (o)
   o.loaded=false
   o.beat_num=0
   o.index_max=0
-  o.debounce_load=nil
   o.selected=o.id==1
   o.ss_options={
     {"amp",25,100,0},
@@ -31,24 +30,28 @@ function Sample:new (o)
   params:add{type='binary',name="make beat",id='ss_make'..i,behavior='trigger',action=function(v) sampleswap(i) end}
   params:add_file("ss_file_load"..i,"load file",_path.audio)
   params:set_action("ss_file_load"..i,function(x)
-    o:load_file(x)
+    o:load_file_original(x)
   end)
 
   params:add_file("ss_file_original"..i,"original file",_path.audio)
+  params:add_text("ss_file_original_noext"..i,"no ext","")
   params:add{type="number",id="ss_file_original_beats"..i,name="original beats",min=0,max=300,default=4}
   params:add{type="number",id="ss_file_original_bpm"..i,name="original bpm",min=0,max=300,default=4}
+  params:add_control("ss_file_original_sec","sec",controlspec.new(0,640000,'lin',0.001,0,'sec'))
   params:hide("ss_file_original"..i)
+  params:hide("ss_file_original_noext"..i)
   params:hide("ss_file_original_beats"..i)
   params:hide("ss_file_original_bpm"..i)
+  params:hide("ss_file_original_sec"..i)
 
-  params:add_file("ss_file_current"..i,"original file",_path.audio)
-  params:add{type="number",id="ss_file_current_beats"..i,name="original beats",min=0,max=300,default=4}
-  params:add{type="number",id="ss_file_current_bpm"..i,name="original bpm",min=0,max=300,default=4}
-  params:hide("ss_file_current"..i)
-  params:hide("ss_file_current_beats"..i)
-  params:hide("ss_file_current_bpm"..i)
+  params:add{type="number",id="ss_index"..i,name="index",min=0,max=300000,default=0}
+  params:set_action("ss_index"..i,function(x)
+    o.debounce_index_load=4
+  end)
+  params:hide("ss_index"..i)
 
-  params:add{type="number",id="ss_beats"..i,name="beats",min=16,max=128,default=32}
+  params:add{type="number",id="ss_input_tempo"..i,name="bpm",min=30,max=300,default=128}
+  params:add{type="number",id="ss_target_beats"..i,name="beats",min=16,max=128,default=32}
   params:add{type="number",id="ss_beatsoffset"..i,name="offset",min=0,max=16,default=0}
   for _,op in ipairs(o.ss_options) do
     params:add{type="number",id="ss_"..op[1]..i,name=op[1],min=0,max=op[3],default=op[2]}
@@ -67,30 +70,93 @@ function Sample:new (o)
   return o
 end
 
-function Sample:load_file(path_to_original_file)
-  local original_folder,original_filename,original_ext=string.match(path_to_original_file,"(.-)([^\\/]-%.?([^%.\\/]*))$")
-  local original_filename_noext=original_filename
-  for match in (original_filename..original_ext):gmatch("(.-)"..original_ext) do
-    original_filename_noext=match
-    break
+function Sample:engine_load_track(path_to_file)
+  engine.load_track(self.id,path_to_file,self.playing and params:get("ss_amp"..self.id)/100 or 0)
+end
+
+function Sample:save_file_index(path_to_file,tempo,i)
+  local path_sampswap=_path.audio.."sampswap/"..params:get("original_filename_noext").."/"
+  local path_to_index_folder=path_sampswap..tempo.."/"
+  os.execute("mkdir -p "..path_to_index_folder)
+
+  -- save the number of seconds
+  local data={seconds=audio.seconds(path_to_file)}
+  data.beats=data.seconds/(60/tempo)
+  json_dump(path_to_index_folder..i..".json",data)
+
+  -- move the file
+  os.execute(string.format("mv %s %s",path_to_file,path_to_index_folder..i..".wav"))
+end
+
+function Sample:load_file_index(tempo,i)
+  local path_sampswap=_path.audio.."sampswap/"..params:get("original_filename_noext").."/"
+  local path_to_index_folder=path_sampswap..tempo.."/"
+
+  -- check if it exists
+  if not util.file_exists(path_to_index_folder..i..".wav") then
+    do return end
   end
 
+  -- load data
+  local data=json_load(path_to_index_folder..i..".json")
+  if data==nil then
+    do return end
+  end
+
+  -- reset parameters
+  params:set("ss_target_beats",data.beats)
+
+  -- load it into the engine
+  self:engine_load_track(path_to_index_folder..i..".wav")
+
+  -- reload the current max index
+  self:determine_index_max()
+end
+
+function Sample:load_file_original(path_to_original_file)
+  if os.is_dir(path_to_original_file) then
+    do return end
+  end
+
+  -- initialize save data
+  local data={path=path_to_original_file}
+
+  -- split into pieces
+  local original_folder,original_filename,original_ext=string.match(path_to_original_file,"(.-)([^\\/]-%.?([^%.\\/]*))$")
+  data.noext=original_filename
+  for match in (original_filename..original_ext):gmatch("(.-)"..original_ext) do
+    data.noext=match
+    break
+  end
   print("load_file",original_folder,original_filename,original_ext)
+
   -- create folder based on the original filename
-  local path_sampswap=_path.audio.."sampswap/"..original_filename_noext.."/"
+  local path_sampswap=_path.audio.."sampswap/"..data.noext.."/"
   os.execute(string.format("mkdir -p %s",path_sampswap))
 
   -- determine the tempo
-
-  -- determine the number of beats
+  data.tempo,data.beats,data.seconds=audio.determine_tempo(path_to_original_file)
 
   -- create a file with the original path and bpm / beats info
+  json_dump(path_sampswap.."original.json",data)
 
-  file=io.open(filename,"w+")
-  io.output(file)
-  io.write(data)
-  io.close(file)
+  -- update parameters
+  params:set("ss_file_original",data.path)
+  params:set("ss_file_original_noext",data.noext)
+  params:set("ss_file_original_bpm",data.tempo)
+  params:set("ss_file_original_beats",data.beats)
+  params:set("ss_file_original_sec",data.seconds)
+  params:set("ss_input_tempo",data.tempo)
 
+  -- reset the load file to the folder containing the file
+  -- so it can't be triggered
+  params:set("ss_file_load",original_folder)
+
+  -- load it into the engine (with volume if playing)
+  self:engine_load_track(path_to_original_file)
+
+  -- reload the current max index
+  self:determine_index_max()
 end
 
 function Sample:update_beat(beats)
@@ -108,32 +174,21 @@ function Sample:update_beat(beats)
 end
 
 function Sample:update()
-  if self.making_file~=nil and global_progress_file_exists==false then
-    if self.debounce_making_file>0 then
-      self.debounce_making_file=self.debounce_making_file-1
-      if self.debounce_making_file==0 then
-        self:determine_index_max()
-        params:set("ss_file"..self.id,self.making_file)
-        self.making_file=nil
-        if self.playing then
-          self.debounce_load=4
-        end
+  if self.making_index~=nil and global_progress_file_exists==false then
+    if self.debounce_making_index~=nil and self.debounce_making_index>0 then
+      self.debounce_making_index=self.debounce_making_index-1
+      if self.debounce_making_index==0 then
+        self.index_max=self.making_index
+        self.making_index=nil
+        params:set("ss_index"..self.id,self.making_index)
       end
     end
   end
-  if self.debounce_load~=nil and self.making==nil then
-    self.debounce_load=self.debounce_load-1
-    if self.debounce_load==0 then
-      self.debounce_load=nil
-      if util.file_exists(params:get("ss_file"..self.id)) then
-        print(string.format("%d: loading %s",self.id,params:get("ss_file"..self.id)))
-        engine.load_track(self.id,params:get("ss_file"..self.id),params:get("ss_amp"..self.id)/100)
-        self.loaded=true
-        if self.dont_align==nil then
-          self.align_track=true
-        end
-        self.dont_align=nil
-      end
+  if self.debounce_index_load~=nil and self.debounce_index_load>0 then
+    self.debounce_index_load=self.debounce_index_load-1
+    if self.debounce_index_load==0 then
+      self.debounce_index_load=nil
+      self:load_file_index(clock.get_tempo(),params:get("ss_index"))
     end
   end
 end
@@ -144,80 +199,6 @@ function Sample:toggle_playing()
   engine.amp(self.id,self.playing and params:get("ss_amp"..self.id)/100 or 0)
   if self.playing then
     params:write()
-  end
-  if not self.loaded then
-    self.debounce_load=1
-  end
-end
-
-function Sample:update_audio_file()
-  print(self.id,"update_audio_file")
-  local fname=params:get("ss_file"..self.id)
-  if not util.file_exists(fname) then
-    do return end
-  end
-  self.folder,self.filename,_=string.match(fname,"(.-)([^\\/]-%.?([^%.\\/]*))$")
-  for token in string.gmatch(self.folder,"[^/]+") do
-    self.folderend=token
-  end
-  local fname=params:get("ss_file"..self.id)
-
-  self.index_cur=0
-  if not string.find(fname,"_sampswap_") then
-    local fname_trimmed=silence_trim(fname)
-    local s=""
-    if util.file_exists(fname_trimmed) then
-      s=util.os_capture("sox "..fname_trimmed.." -n stat 2>&1  | grep Length | awk '{print $3}'")
-      os.execute("rm -f "..fname_trimmed)
-    else
-      s=util.os_capture("sox "..fname.." -n stat 2>&1  | grep Length | awk '{print $3}'")
-    end
-    local file_seconds=tonumber(s)
-    local closet_bpm={0,100000}
-    for bpm=100,200 do
-      local measures=file_seconds/((60/bpm)*4)
-      local measured_rounded=util.round(measures)
-      local dif=math.abs(measured_rounded-measures)
-      dif=dif-(measured_rounded%4==0 and measured_rounded/60 or 0)
-      --print(bpm,measured_rounded,measures,dif)
-      if dif<closet_bpm[2] then
-        closet_bpm[2]=dif
-        closet_bpm[1]=bpm
-      end
-    end
-    local bpm=nil
-    for word in string.gmatch(fname,'([^_]+)') do
-      if string.find(word,"bpm") then
-        bpm=word:match("%d+")
-      end
-    end
-    if bpm==nil then
-      bpm=closet_bpm[1]
-    end
-    params:set("ss_originalfile"..self.id,fname)
-    params:set("ss_originalbpm"..self.id,bpm)
-    params:set("ss_originalbeats"..self.id,util.round(file_seconds/(60/bpm)))
-  else
-    -- determine current index
-    for word in string.gmatch(self.filename,'([^_]+)') do
-      local num=string.match(word,"%d+")
-      if num~=nil then
-        self.index_cur=tonumber(num)
-      end
-    end
-  end
-  _,self.filename_original,_=string.match(params:get("ss_originalfile"..self.id),"(.-)([^\\/]-%.?([^%.\\/]*))$")
-
-  self:determine_index_max()
-  self.loaded=false
-  if self.playing then
-    self.debounce_load=4
-  end
-  -- find the file index in the list
-  for i,fname_in_list in ipairs(self.file_list) do
-    if fname==fname_in_list then
-      self.file_index=i
-    end
   end
 end
 
@@ -248,54 +229,22 @@ function Sample:option_set_delta(d)
 end
 
 function Sample:option_set_delta_index(d)
-  print(self.filename,d)
-  if not string.find(self.filename,"_sampswap_") then
-    do return end
+  local index_cur=params:get("ss_index"..self.id)
+  local index_new=util.clamp(index_cur+d,0,self.index_max)
+  if index_new~=index_cur then
+    params:set("ss_index",index_new)
   end
-  local index_cur=0
-  for word in string.gmatch(self.filename,'([^_]+)') do
-    local num=string.match(word,"%d+")
-    if num~=nil then
-      index_cur=tonumber(num)
-    end
-  end
-  if index_cur==0 then
-    do return end
-  end
-  local index_next=index_cur+d
-  if index_next>self.index_max or index_next<1 then
-    do return end
-  end
-  local filename_next=self:path_from_index(index_next)
-  self.dont_align=true
-  params:set("ss_file"..self.id,filename_next)
 end
 
 function Sample:path_from_index(i)
-  if params:get("ss_originalfile"..self.id)=="" then
-    print("no original file!??!?!?")
-    do return end
-  end
-  local filename=""
-  _,filename,_=string.match(params:get("ss_originalfile"..self.id),"(.-)([^\\/]-%.?([^%.\\/]*))$")
-  -- remove .wav from end
-  for match in (filename..".wav"):gmatch("(.-)"..".wav") do
-    filename=match
-    break
-  end
-  return _path.audio.."sampswap/"..filename.."_sampswap_bpm"..math.floor(clock.get_tempo()).."_"..i..".wav"
+  local path_sampswap=_path.audio.."sampswap/"..params:get("original_filename_noext").."/"
+  return path_sampswap..clock.get_tempo().."/"..i..".wav"
 end
 
 function Sample:determine_index_max()
   self.index_max=0
-  if self.filename==nil then
-    do return end
-  end
-  local tempo=math.floor(clock.get_tempo())
   for i=1,1000 do
-    --print("determine_index_max",self:path_from_index(i))
-    local fname=self:path_from_index(i)
-    if fname==nil or not util.file_exists(fname) then
+    if not util.file_exists(self:path_from_index(i)) then
       break
     end
     self.index_max=i
@@ -303,23 +252,23 @@ function Sample:determine_index_max()
 end
 
 function Sample:swap()
-  if global_progress_file_exists or self.filename==nil or self.making_file~=nil then
+  if global_progress_file_exists or self.filename==nil or self.making_index~=nil then
     do return end
   end
   params:write()
   local tempo=math.floor(clock.get_tempo())
-  self.making_file=self:path_from_index(self.index_max+1)
-  if self.making_file==nil then
+  self.making_index=self:path_from_index(self.index_max+1)
+  if self.making_index==nil then
     do return end
   end
-  self.debounce_making_file=10
+  self.debounce_making_index=10
   local filename=params:get("ss_originalfile"..self.id)
   local cmd="cd ".._path.code.."sampswap/lib/ && lua sampswap.lua --server-started"
   -- TODO: option to change input tempo??
   cmd=cmd.." -filter-in "..params:get("ss_filter_in")
   cmd=cmd.." -filter-out "..params:get("ss_filter_out")
   cmd=cmd.." -t "..tempo.." -b "..params:get("ss_beats"..self.id)
-  cmd=cmd.." -o "..self.making_file.." ".." -i "..filename
+  cmd=cmd.." -o "..self.making_index.." ".." -i "..filename
   for _,op in ipairs(self.ss_options) do
     cmd=cmd.." --"..op[1].." "..params:get("ss_"..op[1]..self.id)
   end
