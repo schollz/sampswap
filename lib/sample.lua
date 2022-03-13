@@ -17,10 +17,10 @@ function Sample:new (o)
   o.selected=o.id==1
   o.ss_options={
     {"amp",25,100,0},
-    {"reverse",5,15,0},
     {"stutter",10,30,0},
-    {"reverb",1,10,0},
     {"revreverb",5,10,0},
+    {"reverb",1,10,0},
+    {"reverse",5,15,0},
     {"jump",20,50,0},
     {"pitch",1,10,0},
   }
@@ -217,7 +217,14 @@ function Sample:toggle_playing()
   self.playing=not self.playing
   engine.amp(self.id,self.playing and params:get("ss_amp"..self.id)/100 or 0)
   if self.playing then
-    params:write()
+    if not self.loaded then 
+      local p,_=self:path_from_index(clock.get_tempo(),params:get("ss_index"..self.id))
+      if not util.file_exists(p) then 
+        p=params:get("ss_file_original"..self.id)
+      end
+      self:engine_load_track(p)
+    end
+      params:write()
   end
 end
 

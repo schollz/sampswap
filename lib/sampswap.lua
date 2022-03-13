@@ -741,7 +741,7 @@ function run()
         local start_beat=math.random(3,total_beats-3)
         local length_beat=math.random(1,2)
         local paste_beat=math.random(2,math.floor(total_beats-total_beats/2-4))*2
-        local crossfade=0.055
+        local crossfade=0.1
         local piece=audio.trim(fname_original,60/bpm*start_beat-crossfade,60/bpm/4*length_beat+crossfade*2)
         piece=audio.supercollider_effect(piece,"reverberate")
         fname=audio.paste(fname,piece,60/bpm/2*paste_beat,crossfade)
@@ -757,7 +757,7 @@ function run()
         local start_beat=math.random(3,total_beats-3)
         local length_beat=math.random(1,2)
         local paste_beat=math.random(2,math.floor(total_beats-total_beats/2-4))*2
-        local crossfade=0.005
+        local crossfade=0.1
         local piece=audio.trim(fname_original,60/bpm*start_beat-crossfade,60/bpm/4*length_beat+crossfade*2)
         piece=audio.supercollider_effect(piece,"reverberate")
         piece=audio.reverse(piece)

@@ -56,12 +56,6 @@ function init()
           sample[i]:default()
         end
       end
-      if clock.get_tempo()~=current_tempo then
-        current_tempo=clock.get_tempo()
-        for i,smpl in ipairs(sample) do
-          smpl:determine_index_max()
-        end
-      end
       lattice_beats=lattice_beats+1
       local tozero={}
       if sample~=nil then 

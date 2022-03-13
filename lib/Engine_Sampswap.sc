@@ -101,8 +101,11 @@ Engine_Sampswap : CroneEngine {
                         options: nrtServer.options,
                         duration: duration,
                         action: {
-                            postln("done rendering: " ++ outFile);
-                            NetAddr.new("localhost",oscCallbackPort).sendMsg("/quit");
+                            Routine {
+                                postln("done rendering: " ++ outFile);
+                                0.25.wait;
+                                NetAddr.new("localhost",oscCallbackPort).sendMsg("/quit");
+                            }.play;
                         }
                     );
                 }.play;
