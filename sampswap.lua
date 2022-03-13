@@ -10,10 +10,15 @@
 -- K2 generates beat
 -- K3 toggles beat
 -- E changes sample
+include("sampswap/lib/utils")
+UI=require("ui")
+if not string.find(package.cpath,"/home/we/dust/code/sampswap/lib/") then
+  package.cpath=package.cpath..";/home/we/dust/code/sampswap/lib/?.so"
+end
+json=require("cjson")
 local lattice_=require("lattice")
 local sample_=include("sampswap/lib/sample")
 -- local crowseq=include("sampswap/lib/crowseq")
-local UI=require("ui")
 
 engine.name="Sampswap"
 
@@ -32,15 +37,13 @@ function init()
   samplei=1
   sample=nil
 
-
-
   current_tempo=clock.get_tempo()
   lattice=lattice_:new()
   lattice_beats=-1
   pattern=lattice:new_pattern{
     action=function(t)
-      if global_installing_file_exists then 
-        do return end 
+      if global_installing_file_exists then
+        do return end
       end
       loading=not util.file_exists(NRTREADY)
       if sample==nil then
@@ -97,12 +100,12 @@ function init()
   clock_redraw=clock.run(function()
     while true do
       clock.sleep(1/10)
-      if global_installing_file_exists then 
+      if global_installing_file_exists then
         global_installing_file_exists=util.file_exists(INSTALLINGFILE)
       else
         if sample~=nil then
           sample[samplei]:update()
-        end  
+        end
       end
       redraw()
     end
@@ -151,7 +154,7 @@ end
 function redraw()
   screen.clear()
   screen.aa(0)
-  if global_installing_file_exists then 
+  if global_installing_file_exists then
     screen.move(64,32)
     screen.text_center("installing sampswap...")
   else
