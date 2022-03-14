@@ -722,9 +722,9 @@ function run()
       for i=1,math.floor(total_beats*p_jump/100) do 
         progress=progress+1
         os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..PROGRESSFILE)
-        local length_beat=math.random(1,3)*2
-        local start_beat=math.random(4,total_beats-length_beat/2-1)*2
-        local paste_beat=math.random(2,total_beats-length_beat/2-2)*2
+        local length_beat=math.random(1,3) -- eigth notes
+        local start_beat=math.random(1,math.floor(total_beats-length_beat/2))*2
+        local paste_beat=math.random(1,math.floor(total_beats-length_beat/2))*2
         local crossfade=0.05
         fname=audio.copy_and_paste(fname,60/bpm/2*start_beat,60/bpm/2*(start_beat+length_beat),60/bpm/2*paste_beat,crossfade)
         if not os.file_exists(fname) then
@@ -736,9 +736,9 @@ function run()
       for i=1,math.floor(total_beats*p_reverse/100) do 
         progress=progress+1
         os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..PROGRESSFILE)
-        local length_beat=math.random(1,3)
-        local start_beat=math.random(2,total_beats-length_beat-1)*2
-        local paste_beat=math.random(2,math.floor(total_beats-length_beat*2))*2
+        local length_beat=math.random(1,3) --eight notes
+        local start_beat=math.random(1,math.floor(total_beats-length_beat/2))*2
+        local paste_beat=math.random(1,math.floor(total_beats-length_beat/2))*2
         local crossfade=0.05
         local piece=audio.reverse(audio.trim(fname_original,60/bpm/2*start_beat-crossfade,60/bpm/2*length_beat+crossfade*2))
         fname=audio.paste(fname,piece,60/bpm/2*paste_beat,crossfade)
@@ -767,9 +767,9 @@ function run()
       for i=1,math.floor(total_beats*p_revreverb/100) do 
         progress=progress+1
         os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..PROGRESSFILE)
-        local start_beat=math.random(3,total_beats-3)
-        local length_beat=math.random(1,2)
-        local paste_beat=math.random(2,math.floor(total_beats-length_beat*2))*2
+        local length_beat=math.random(1,4)
+        local start_beat=math.random(1,total_beats-length_beat)
+        local paste_beat=math.random(1,2*(total_beats-length_beat))
         local crossfade=0.01
         local piece=audio.trim(fname_original,60/bpm*start_beat-crossfade,60/bpm/4*length_beat+crossfade*2)
         piece=audio.supercollider_effect(piece,"reverberate")
