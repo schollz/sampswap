@@ -710,8 +710,8 @@ function run()
         local length_beat=math.random(1,4)/8
         local start_beat=math.random(1,total_beats-length_beat*8)
         local paste_beat=start_beat
-        local crossfade=0.005
-        local piece=audio.pitch(audio.trim(fname_original,60/bpm*start_beat-crossfade,60/bpm*length_beat+crossfade*2),2)
+        local crossfade=0.095
+        local piece=audio.pitch(audio.trim(fname_original,60/bpm*start_beat-crossfade,60/bpm*length_beat+crossfade*2),math.random(2,3))
         fname=audio.paste(fname,piece,60/bpm*paste_beat,crossfade)
         if not os.file_exists(fname) then
           print("!!!! ERROR !!!!")
@@ -725,7 +725,7 @@ function run()
         local length_beat=math.random(1,3)*2
         local start_beat=math.random(4,total_beats-length_beat/2-1)*2
         local paste_beat=math.random(2,total_beats-length_beat/2-2)*2
-        local crossfade=0.005
+        local crossfade=0.05
         fname=audio.copy_and_paste(fname,60/bpm/2*start_beat,60/bpm/2*(start_beat+length_beat),60/bpm/2*paste_beat,crossfade)
         if not os.file_exists(fname) then
           print("!!!! ERROR !!!!")
@@ -738,8 +738,8 @@ function run()
         os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..PROGRESSFILE)
         local length_beat=math.random(1,3)
         local start_beat=math.random(2,total_beats-length_beat-1)*2
-        local paste_beat=math.random(2,math.floor(total_beats-total_beats/2-4))*2
-        local crossfade=0.1
+        local paste_beat=math.random(2,math.floor(total_beats-length_beat*2))*2
+        local crossfade=0.05
         local piece=audio.reverse(audio.trim(fname_original,60/bpm/2*start_beat-crossfade,60/bpm/2*length_beat+crossfade*2))
         fname=audio.paste(fname,piece,60/bpm/2*paste_beat,crossfade)
         if not os.file_exists(fname) then
@@ -753,7 +753,7 @@ function run()
         os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..PROGRESSFILE)
         local length_beat=math.random(1,2)
         local start_beat=math.random(3,total_beats-length_beat-1)
-        local paste_beat=math.random(2,math.floor(total_beats-total_beats/2-4))*2
+        local paste_beat=math.random(2,math.floor(total_beats-length_beat*2))*2
         local crossfade=0.1
         local piece=audio.trim(fname_original,60/bpm*start_beat-crossfade,60/bpm/4*length_beat+crossfade*2)
         piece=audio.supercollider_effect(piece,"reverberate")
@@ -769,8 +769,8 @@ function run()
         os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..PROGRESSFILE)
         local start_beat=math.random(3,total_beats-3)
         local length_beat=math.random(1,2)
-        local paste_beat=math.random(2,math.floor(total_beats-total_beats/2-4))*2
-        local crossfade=0.1
+        local paste_beat=math.random(2,math.floor(total_beats-length_beat*2))*2
+        local crossfade=0.01
         local piece=audio.trim(fname_original,60/bpm*start_beat-crossfade,60/bpm/4*length_beat+crossfade*2)
         piece=audio.supercollider_effect(piece,"reverberate")
         piece=audio.reverse(piece)
@@ -784,7 +784,7 @@ function run()
       for i=1,math.floor(total_beats*p_stutter/100/2) do 
         progress=progress+1
         os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..PROGRESSFILE)
-        local crossfade=0.005
+        local crossfade=0.05
         local beat_start=math.random(4,total_beats-4)
         local stutters=math.random(1,3)*4
         local piece=audio.stutter(fname_original,60/bpm/4,60/bpm*beat_start,stutters,crossfade,0.001,nil)
@@ -802,7 +802,7 @@ function run()
         local length_beat=math.random(1,3)
         local start_beat=math.random(1,total_beats-length_beat-1)
         local paste_beat=start_beat
-        local crossfade=0.005
+        local crossfade=0.05
         local piece=audio.trim(fname,60/bpm*start_beat-crossfade*0.75,60/bpm*length_beat+crossfade*0.75*2)
         piece=audio.slowdown(piece,0.75)
         fname=audio.paste(fname,piece,60/bpm*paste_beat,crossfade)
