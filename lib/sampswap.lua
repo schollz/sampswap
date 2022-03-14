@@ -354,6 +354,12 @@ function audio.retempo_stretch(fname,old_tempo,new_tempo)
   return fname2
 end
 
+function audio.slowdown(fname,slowdown)
+  local fname2=string.random_filename()
+  os.cmd(string.format("sox %s %s tempo -m %f",fname,fname2,slowdown))
+  return fname2
+end
+
 function audio.get_info(fname)
   local sample_rate=tonumber(os.capture("sox --i "..fname.." | grep 'Sample Rate' | awk '{print $4}'"))
   local channels=tonumber(os.capture("sox --i "..fname.." | grep 'Channels' | awk '{print $3}'"))
@@ -494,6 +500,7 @@ function run()
   local input_tempo=nil
   local p_reverse=10
   local p_stutter=5
+  local p_slow=10
   local p_jump=80
   local p_pitch=10
   local p_reverb=2
@@ -532,7 +539,7 @@ function run()
       fname=arg[i+1]
       for j=2,100 do
         local a=arg[i+j]
-        if string.find(a,"-") or a==nil then
+        if a==nil or string.find(a,"-")  then
           break
         end
         fname=fname.." "..a
@@ -547,6 +554,8 @@ function run()
       fname_out=arg[i+1]
     elseif string.find(v,"reverse") then
       p_reverse=tonumber(arg[i+1]) or p_reverse
+    elseif string.find(v,"slowdown") then
+      p_slow=tonumber(arg[i+1]) or p_slow
     elseif string.find(v,"stutter") then
       p_stutter=tonumber(arg[i+1]) or p_stutter
     elseif string.find(v,"tapedeck") then
@@ -568,6 +577,8 @@ function run()
       if new_tempo then 
         new_tempo=math.floor(new_tempo)
       end
+    elseif string.find(v,"-sendosc") then
+      SENDOSC=arg[i+1]
     elseif string.find(v,"-debug") then
       debugging=true
     end
@@ -687,6 +698,8 @@ function run()
         +math.floor(total_beats*p_jump/100)
         +math.floor(total_beats*p_reverse/100)
         +math.floor(total_beats*p_revreverb/100)
+        +math.floor(total_beats*p_reverb/100)
+        +math.floor(total_beats*p_slow/100)
         +math.floor(total_beats*p_stutter/100/2)*2+3
 
       local fname_original=fname
@@ -734,6 +747,23 @@ function run()
           do return end 
         end
       end
+      -- copy and slow and paste
+      for i=1,math.floor(total_beats*p_slow/100) do 
+        progress=progress+1
+        os.cmd('echo '..(math.round(progress/total_things*1000)/10).." >> "..PROGRESSFILE)
+        local length_beat=math.random(2,4)
+        local start_beat=math.random(1,total_beats-length_beat-1)
+        local paste_beat=start_beat
+        local crossfade=0.1
+        local piece=audio.trim(fname,60/bpm*start_beat-crossfade,60/bpm*length_beat+crossfade*2)
+        piece=audio.slowdown(piece,0.5)
+        fname=audio.paste(fname,piece,60/bpm*paste_beat,crossfade)
+        if not os.file_exists(fname) then
+          print("!!!! ERROR !!!!")
+          do return end 
+        end
+      end
+      
       -- copy and reverberate and paste
       for i=1,math.floor(total_beats*p_reverb/100) do 
         progress=progress+1
