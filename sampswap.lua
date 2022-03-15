@@ -1,5 +1,5 @@
--- sampswap v2.0.0
--- bysplicing
+-- sampswap 
+--
 --
 -- llllllll.co/t/sampswap
 --
@@ -7,9 +7,12 @@
 --
 --    ▼ instructions below ▼
 --
--- K2 generates beat
--- K3 toggles beat
--- E changes sample
+-- E1 selects a track
+-- E2 selects a parameter
+-- E3 modifies parameter
+-- K2 generates track
+-- K3 toggles playing
+
 include("sampswap/lib/utils")
 UI=require("ui")
 if not string.find(package.cpath,"/home/we/dust/code/sampswap/lib/") then
