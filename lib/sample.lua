@@ -17,12 +17,12 @@ function Sample:new (o)
   o.selected=o.id==1
   o.ss_options={
     {"amp",25,100,0},
-    {"stutter",10,30,0},
-    {"revreverb",5,20,0},
-    {"reverb",1,20,0},
+    {"stutter",15,30,0},
+    {"revreverb",8,20,0},
+    {"reverb",0,20,0},
     {"reverse",5,20,0},
     {"jump",20,50,0},
-    {"pitch",1,20,0},
+    {"pitch",0,20,0},
   }
   local i=o.id
   params:add_group("loop "..i,14+#o.ss_options)

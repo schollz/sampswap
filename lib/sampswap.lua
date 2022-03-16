@@ -500,7 +500,7 @@ function run()
   local input_tempo=nil
   local p_reverse=10
   local p_stutter=5
-  local p_slow=10
+  local p_slow=0
   local p_jump=80
   local p_pitch=10
   local p_reverb=2
