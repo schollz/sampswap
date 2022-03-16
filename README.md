@@ -7,7 +7,7 @@ swap samples within loops to make new loops.
 
 this script is forked from [makebreakbeat](https://github.com/schollz/makebreakbeat). the *makebreakbeat* also worked to create mangled loops. however, *makebreakbeat* works by extract audio onset positions and then rebuilds the audio one piece at a time, by selecting an onset and adding effects to it and then appending it to the file. in contrast, *sampswap* first repeats the original audio and then copies random regions, adds effects to that copy, and then pastes the effected copy to a random position along the loop (editing the file in-place essentially).
 
-this script is nice to use to generate material (especially "breakbeat" type things) but since it automatically tempolocks and syncs up to four tracks it can be nicely performed with. 
+this script works best with loops (see notes below for reasons why). it can be used to generate material (especially "breakbeat" type things) but since it automatically tempolocks and syncs up to four tracks it can be nicely performed with. 
 
 some may also find this script might be a framework to borrow from or extend (which I happily encourage!). in addition to the normal norns engine, it has [a 'non-realtime' engine](https://github.com/schollz/sampswap/blob/main/lib/Engine_Sampswap.sc#L24-L78) which effectively can be used to resample audio processed by any SuperCollider SynthDef. also there is a embedded [lua library that wraps sox](https://github.com/schollz/sampswap/blob/main/lib/sampswap.lua#L410-L430) for easily creating effects+splices (sox splices are esp nice because it can join with crossfade using wave similarity to find best locations). basically sox+scnrt = daw in a primordial form. this script is not trying to reinvent the daw, though. if anything I want this script to be a "raw" ("random audio workstation") where all the operations are random and you only can define their probabilities.
 
@@ -50,6 +50,9 @@ happy to answer questions and if time permits I can make a little tutorial video
 
 ## notes
 
+- track bpms are "guessed" assuming they are *loops* of even number beats. if you are not using loops then do not expect the input bpm to be correct (and probably the syncing won't work). 
+- input tracks are trimmed before processing, so if your loop has purposeful silence at the end, it probably not be guessed correctly for the right bpm.
+- if your track name contains "bpmX" then it will skip guessing the beat and assume the source bpm is X
 - this script generates beats *slowly*. to get around this I suggest generating short beats (16 beats) continuously (beats continue to play when generating).
 
 # Install
@@ -60,4 +63,4 @@ install with
 ;install https://github.com/schollz/sampswap
 ```
 
-once you start the script for the first time it will install `aubio`, `sox`, and `sendosc` (~8 MB total).
+once you start the script for the first time it will install `sox`, and `sendosc` (~8 MB total).
