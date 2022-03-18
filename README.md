@@ -54,6 +54,7 @@ happy to answer questions and if time permits I can make a little tutorial video
 - input tracks are trimmed before processing, so if your loop has purposeful silence at the end, it probably not be guessed correctly for the right bpm.
 - if your track name contains "bpmX" then it will skip guessing the beat and assume the source bpm is X
 - this script generates beats *slowly*. to get around this I suggest generating short beats (16 beats) continuously (beats continue to play when generating).
+- when the script starts it needs another 3 seconds to start the non-realtime server so K2 will not function until then (in case you see K2 not doing anything).
 
 # Install
 
