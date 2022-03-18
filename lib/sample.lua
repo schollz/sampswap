@@ -53,7 +53,7 @@ function Sample:new (o)
   params:hide("ss_index"..i)
 
   params:add{type="number",id="ss_input_tempo"..i,name="bpm",min=30,max=300,default=128}
-  params:add{type="number",id="ss_target_beats"..i,name="beats",min=16,max=128,default=32}
+  params:add{type="number",id="ss_target_beats"..i,name="beats",min=16,max=128,default=16}
   params:add{type="number",id="ss_beatsoffset"..i,name="offset",min=0,max=16,default=0}
   for _,op in ipairs(o.ss_options) do
     params:add{type="number",id="ss_"..op[1]..i,name=op[1],min=0,max=op[3],default=op[2]}
