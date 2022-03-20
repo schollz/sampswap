@@ -661,6 +661,12 @@ function run()
         if bpm==nil then 
           bpm=audio.tempo(fname)
         end
+	if bpm*2 < new_tempo then 
+		bpm=bpm*2
+	end
+	if bpm/2 > new_tempo then 
+		bpm=bpm/2
+	end
       else
         bpm=input_tempo 
       end
