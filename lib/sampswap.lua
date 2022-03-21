@@ -514,6 +514,8 @@ function run()
   local RETEMPO_NONE=3
   local filter_in_beats=4
   local filter_out_beats=4
+  local add_kick=false
+  local add_sidechain=false
   for i,v in ipairs(arg) do
     if string.find(v,"input") and string.find(v,"tempo") then
       input_tempo=tonumber(arg[i+1]) or input_tempo
@@ -560,6 +562,10 @@ function run()
       p_stutter=tonumber(arg[i+1]) or p_stutter
     elseif string.find(v,"tapedeck") then
       tapedeck=true
+    elseif string.find(v,"addkick") then
+      add_kick=true
+    elseif string.find(v,"addsidechain") then
+      add_sidechain=true
     elseif string.find(v,"pitch") then
       p_pitch=tonumber(arg[i+1]) or p_pitch
     elseif string.find(v,"jump") then
@@ -661,12 +667,15 @@ function run()
         if bpm==nil then 
           bpm=audio.tempo(fname)
         end
-	if bpm*2 < new_tempo then 
-		bpm=bpm*2
-	end
-	if bpm/2 > new_tempo then 
-		bpm=bpm/2
-	end
+        local bpms={bpm/4,bpm/2,bpm,bpm*2,bpm*4}
+        local closest=100000
+        for _, b in ipairs(bpms) do 
+          local diff=math.abs(new_tempo-b)
+          if diff<closest then 
+            closest=diff
+            bpm=b
+          end          
+        end
       else
         bpm=input_tempo 
       end
@@ -838,6 +847,20 @@ function run()
       if not os.file_exists(fname) then
         print("!!!! ERROR !!!!")
         do return end 
+      end
+
+      -- bitcrush
+      -- local bitcrush_occurences=4
+      -- local bitcrush_length=4*60/bpm
+      -- fname=audio.supercollider_effect(fname,"bitcrush",bitcrush_occurences,bitcrush_length)
+      if add_kick or add_sidechain then 
+        local sidechain_occurences=4
+        local sidechain_length=8*60/bpm
+        local sidechain_bpm=bpm
+        if sidechain_bpm>100 then 
+          sidechain_bpm=sidechain_bpm/2
+        end
+        fname=audio.supercollider_effect(fname,add_kick and "kick" or "sidechain",sidechain_occurences,sidechain_length,sidechain_bpm)
       end
       if tapedeck then 
         fname=audio.supercollider_effect(fname,"tapedeck",filter_in_beats*60/bpm,filter_out_beats*60/bpm)
